@@ -1,8 +1,9 @@
 // lib/views/home_page.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/home_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../controllers/home_controller.dart';
+import '../widgets/profile/health_check/HealthSurveyPage.dart';
 import '../widgets/profile/period_dates/full_screen_calendar_picket.dart';
 import '../widgets/profile/profile_page.dart';
 
@@ -16,19 +17,17 @@ class HomePage extends StatelessWidget {
     final sel = c.selectedCalendarDate.value;
     final today = DateTime.now();
     final selectedIsToday =
-        sel.year == today.year &&
-        sel.month == today.month &&
-        sel.day == today.day;
+        sel.year == today.year && sel.month == today.month && sel.day == today.day;
     final useSelected =
         !selectedIsToday &&
-        (c.selectedDaysUntilNextPeriod.value != null ||
-            c.selectedDaysUntilOvulation.value != null);
+            (c.selectedDaysUntilNextPeriod.value != null ||
+                c.selectedDaysUntilOvulation.value != null);
     final refDate = useSelected
         ? DateTime(
-            c.selectedCalendarDate.value.year,
-            c.selectedCalendarDate.value.month,
-            c.selectedCalendarDate.value.day,
-          )
+      c.selectedCalendarDate.value.year,
+      c.selectedCalendarDate.value.month,
+      c.selectedCalendarDate.value.day,
+    )
         : DateTime.now();
 
     final info = c.getCycleInfo(refDate);
@@ -39,27 +38,18 @@ class HomePage extends StatelessWidget {
     final daysToOv = info.daysUntilOvulation;
     final lastLen = c.lastPeriodLengthDays.value;
 
-    // 1) INSIDE PERIOD: soft warm pink gradient
     if (daysSincePeriodStart >= 0 && daysSincePeriodStart < lastLen) {
       return [const Color(0xFFFFE9ED), const Color(0xFFFFC7D1)];
     }
-
-    // 2) approaching ovulation: calming teal
     if (daysToOv > 0 && daysToOv <= 14) {
       return [const Color(0xFFE6F9F3), const Color(0xFFBFEFEA)];
     }
-
-    // 3) fertile window (ovulation +/-3): peach/orange highlight
     if (daysToOv >= -3 && daysToOv <= 3) {
       return [const Color(0xFFFFF7E6), const Color(0xFFFFEDCC)];
     }
-
-    // 4) pre-period warning (<=10 days): soft warm neutral
     if (daysUntilNextPeriod > 0 && daysUntilNextPeriod <= 10) {
       return [const Color(0xFFF8F4F6), const Color(0xFFF0E7EA)];
     }
-
-    // default: pastel pink-lavender neutral
     return [const Color(0xFFFDEFF1), const Color(0xFFF8F3FB)];
   }
 
@@ -81,10 +71,10 @@ class HomePage extends StatelessWidget {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Colors.pinkAccent, // header & selected date color
-              onPrimary: Colors.white, // text on primary (like month/year)
-              onSurface: Colors.black, // default text
+            colorScheme: const ColorScheme.light(
+              primary: Colors.pinkAccent,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(foregroundColor: Colors.pinkAccent),
@@ -104,11 +94,11 @@ class HomePage extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Get.back(result: false),
-              child: Text('Cancel', style: TextStyle(color: Colors.redAccent)),
+              child: const Text('Cancel', style: TextStyle(color: Colors.redAccent)),
             ),
             TextButton(
               onPressed: () => Get.back(result: true),
-              child: Text('Confirm', style: TextStyle(color: Colors.redAccent)),
+              child: const Text('Confirm', style: TextStyle(color: Colors.redAccent)),
             ),
           ],
         ),
@@ -116,17 +106,11 @@ class HomePage extends StatelessWidget {
       if (confirm == true) {
         try {
           await c.updatePredictedNextPeriodStart(picked);
-          Get.snackbar(
-            'Updated',
-            'Next period date saved',
-            snackPosition: SnackPosition.BOTTOM,
-          );
+          Get.snackbar('Updated', 'Next period date saved',
+              snackPosition: SnackPosition.BOTTOM);
         } catch (e) {
-          Get.snackbar(
-            'Error',
-            'Failed to save date: $e',
-            snackPosition: SnackPosition.BOTTOM,
-          );
+          Get.snackbar('Error', 'Failed to save date: $e',
+              snackPosition: SnackPosition.BOTTOM);
         }
       }
     }
@@ -183,14 +167,14 @@ class HomePage extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => Get.to(ProfilePage()),
                 child: Obx(
-                  () => CircleAvatar(
+                      () => CircleAvatar(
                     radius: 18,
                     backgroundImage: c.avatarUrl.value.isNotEmpty
                         ? NetworkImage(c.avatarUrl.value)
                         : null,
                     backgroundColor: Colors.pink.shade300,
                     child: c.avatarUrl.value.isEmpty
-                        ? Icon(Icons.person, color: Colors.white)
+                        ? const Icon(Icons.person, color: Colors.white)
                         : null,
                   ),
                 ),
@@ -198,11 +182,10 @@ class HomePage extends StatelessWidget {
             ),
             actions: [
               IconButton(
-                icon: Icon(Icons.calendar_today_outlined),
+                icon: const Icon(Icons.calendar_today_outlined),
                 color: fg,
                 tooltip: 'Open calendar',
                 onPressed: () {
-                  // open full calendar modal (month / year toggle + range logging)
                   showModalBottomSheet(
                     context: Get.context!,
                     isScrollControlled: true,
@@ -218,20 +201,20 @@ class HomePage extends StatelessWidget {
                 },
               ),
             ],
-
           );
         }),
       ),
 
       body: SafeArea(
         child: Obx(() {
-          if (c.isLoading.value)
+          if (c.isLoading.value) {
             return const Center(child: CircularProgressIndicator());
+          }
 
           return RefreshIndicator(
             onRefresh: () async {
               await c.fetchUserData();
-              await c.fetchCards();
+              await c.fetchCards(); // new tips each pull
               c.selectedCalendarDate.value = DateTime.now();
               c.initialCalendarDate = DateTime.now();
               c.recomputeNow();
@@ -240,16 +223,16 @@ class HomePage extends StatelessWidget {
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(child: _topPanel(context, c)),
-                SliverToBoxAdapter(child: const SizedBox(height: 10)),
-                SliverToBoxAdapter(child: _cardsCarousel(c)),
-                SliverToBoxAdapter(child: const SizedBox(height: 12)),
+                const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                SliverToBoxAdapter(child: _cardsCarousel(c)), // Tips with shimmer while loading
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([_contentCard()]),
                   ),
                 ),
-                SliverToBoxAdapter(child: const SizedBox(height: 80)),
+                const SliverToBoxAdapter(child: SizedBox(height: 80)),
               ],
             ),
           );
@@ -266,20 +249,18 @@ class HomePage extends StatelessWidget {
       final sel = c.selectedCalendarDate.value;
       final today = DateTime.now();
       final selectedIsToday =
-          sel.year == today.year &&
-          sel.month == today.month &&
-          sel.day == today.day;
+          sel.year == today.year && sel.month == today.month && sel.day == today.day;
       final useSelected =
           !selectedIsToday &&
-          (c.selectedDaysUntilNextPeriod.value != null ||
-              c.selectedDaysUntilOvulation.value != null);
+              (c.selectedDaysUntilNextPeriod.value != null ||
+                  c.selectedDaysUntilOvulation.value != null);
 
       final refDate = useSelected
           ? DateTime(
-              c.selectedCalendarDate.value.year,
-              c.selectedCalendarDate.value.month,
-              c.selectedCalendarDate.value.day,
-            )
+        c.selectedCalendarDate.value.year,
+        c.selectedCalendarDate.value.month,
+        c.selectedCalendarDate.value.day,
+      )
           : DateTime.now();
 
       final info = c.getCycleInfo(refDate);
@@ -315,13 +296,11 @@ class HomePage extends StatelessWidget {
           }
         } else if (daysUntilNextPeriod > 0 && daysUntilNextPeriod <= 10) {
           title = 'Next period in';
-          big =
-              '${daysUntilNextPeriod} day${daysUntilNextPeriod == 1 ? '' : 's'}';
+          big = '${daysUntilNextPeriod} day${daysUntilNextPeriod == 1 ? '' : 's'}';
           subtitle = 'Plan ahead';
         } else if (daysUntilNextPeriod >= 0) {
           title = 'Next period in';
-          big =
-              '${daysUntilNextPeriod} day${daysUntilNextPeriod == 1 ? '' : 's'}';
+          big = '${daysUntilNextPeriod} day${daysUntilNextPeriod == 1 ? '' : 's'}';
           subtitle = 'Keep tracking';
         } else {
           title = 'Prediction';
@@ -335,13 +314,12 @@ class HomePage extends StatelessWidget {
       }
 
       final infoCaption =
-          (c.selectedCalendarDate.value.day == DateTime.now().day &&
-              c.selectedCalendarDate.value.month == DateTime.now().month &&
-              c.selectedCalendarDate.value.year == DateTime.now().year)
+      (c.selectedCalendarDate.value.day == DateTime.now().day &&
+          c.selectedCalendarDate.value.month == DateTime.now().month &&
+          c.selectedCalendarDate.value.year == DateTime.now().year)
           ? 'Based on today'
           : 'Based on selected date: ${c.selectedCalendarDate.value.toLocal().toIso8601String().split("T").first}';
 
-      // smaller CTA style (rounded pill)
       final ButtonStyle logPeriodStyle = ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 28),
         minimumSize: const Size(120, 44),
@@ -350,7 +328,6 @@ class HomePage extends StatelessWidget {
         elevation: 0,
       );
 
-      // Gesture-enabled top panel: swipe left/right to move selected date +/- 1 day
       return AnimatedContainer(
         duration: const Duration(milliseconds: 480),
         curve: Curves.easeInOut,
@@ -374,26 +351,19 @@ class HomePage extends StatelessWidget {
                   child: CalendarStrip(
                     key: _calendarStripKey,
                     controller: c,
-                    onSettingsTap: () =>
-                        _showOvulationToggleSheet(Get.context!),
+                    onSettingsTap: () => _showOvulationToggleSheet(Get.context!),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            // big area
             Column(
               children: [
-                // small title
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: fgColor.withOpacity(0.95),
-                  ),
+                  style: TextStyle(fontSize: 16, color: fgColor.withOpacity(0.95)),
                 ),
                 const SizedBox(height: 8),
-                // hero big text — larger and more prominent
                 Text(
                   big,
                   style: TextStyle(
@@ -403,27 +373,18 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                // subtitle / short hint
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: fgColor.withOpacity(0.9),
-                  ),
+                  style: TextStyle(fontSize: 14, color: fgColor.withOpacity(0.9)),
                 ),
                 const SizedBox(height: 14),
-                // small info caption
                 Text(
                   infoCaption,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: fgColor.withOpacity(0.85),
-                  ),
+                  style: TextStyle(fontSize: 12, color: fgColor.withOpacity(0.85)),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
-                    // open full calendar modal (month / year toggle + range logging)
                     showModalBottomSheet(
                       context: Get.context!,
                       isScrollControlled: true,
@@ -440,10 +401,7 @@ class HomePage extends StatelessWidget {
                   style: logPeriodStyle,
                   child: const Text(
                     'Log period',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -454,63 +412,119 @@ class HomePage extends StatelessWidget {
     });
   }
 
+  // ===== Tips Carousel with Shimmer =====
   Widget _cardsCarousel(HomeController c) {
     return Container(
       padding: const EdgeInsets.only(left: 12),
-      height: 140,
+      height: 170,
       child: Obx(() {
-        final list = List.from(c.cards);
+        final list = List<Map<String, dynamic>>.from(c.cards);
+
+        // If tips not ready yet (or after refresh), show shimmer skeletons.
+        if (list.isEmpty) {
+          return _tipsShimmer();
+        }
+
         return ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: list.length,
           separatorBuilder: (_, __) => const SizedBox(width: 12),
           itemBuilder: (ctx, idx) {
             final item = list[idx];
-            return _miniCard(item, idx);
+            return _tipCard(item, idx);
           },
         );
       }),
     );
   }
 
-  // give each card a unique soft accent so they look lively (pink, teal, lavender)
-  Widget _miniCard(Map item, int idx) {
-    final accents = [
-      const Color(0xFFFFE9F0), // soft pink
-      const Color(0xFFE7FBF8), // soft teal
-      const Color(0xFFF3EBFF), // soft lavender
-    ];
-    final borderAccents = [
-      const Color(0xFFFFA6C0),
-      const Color(0xFF9DE0CC),
-      const Color(0xFFCDADFF),
-    ];
+  // ⚡️ Shimmer skeletons (no external packages)
+  Widget _tipsShimmer() {
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: 3,
+      separatorBuilder: (_, __) => const SizedBox(width: 12),
+      itemBuilder: (ctx, _) => _ShimmerCard(),
+    );
+  }
 
-    final bg = accents[idx % accents.length];
-    final border = borderAccents[idx % borderAccents.length];
+  Widget _tipCard(Map item, int idx) {
+    final String title = (item['title'] ?? '').toString();
+    final String subtitle = (item['subtitle'] ?? '').toString();
+    final String category = (item['category'] ?? 'Hygiene').toString();
+    final String icon = (item['icon'] ?? '💡').toString();
+
+    // Soft category-driven gradients
+    final Map<String, List<Color>> catGrad = {
+      'Hygiene': [const Color(0xFFFFE9F0), const Color(0xFFFFD6E3)],
+      'Products': [const Color(0xFFE7FBF8), const Color(0xFFCFF6EE)],
+      'Hydration': [const Color(0xFFE6F4FF), const Color(0xFFCCE7FF)],
+      'Diet': [const Color(0xFFFFF6E7), const Color(0xFFFFE7BF)],
+      'Movement': [const Color(0xFFEFF7FF), const Color(0xFFD8EAFF)],
+      'Sleep & Relax': [const Color(0xFFF3EBFF), const Color(0xFFE2D7FF)],
+      'Cramps & Comfort': [const Color(0xFFFFF1E9), const Color(0xFFFFDEC9)],
+      'Disposal & Environment': [const Color(0xFFE8FFF1), const Color(0xFFCFF7E0)],
+      'Travel & Backup': [const Color(0xFFFFF0F3), const Color(0xFFFFD7E1)],
+      'Tracking & Symptoms': [const Color(0xFFEFFAF6), const Color(0xFFD6F2E7)],
+    };
+
+    final colors = catGrad[category] ?? [const Color(0xFFFDEFF1), const Color(0xFFF8F3FB)];
+    final fg = _foregroundForGradient(colors);
 
     return Container(
-      width: 150,
+      width: 300,
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
-        ],
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12.withOpacity(0.06)),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 3))],
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            item['title'] ?? '',
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          // Top row: icon + category chip
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(icon, style: const TextStyle(fontSize: 18)),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  category,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black.withOpacity(0.7),
+                  ),
+                ),
+              ),
+            ],
           ),
           const Spacer(),
           Text(
-            item['subtitle']?.toString() ?? '',
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: fg),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13, color: fg.withOpacity(0.9)),
           ),
         ],
       ),
@@ -519,64 +533,60 @@ class HomePage extends StatelessWidget {
 
   Widget _contentCard() {
     final today = DateTime.now();
-    final monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sept',
-      'Oct',
-      'Nov',
-      'Dec',
+    final monthNames = const [
+      'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec',
     ];
-    final headerText =
-        'My daily insights • ${today.day} ${monthNames[today.month - 1]}';
+    final headerText = 'Quick Symptom Check • ${today.day} ${monthNames[today.month - 1]}';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        color: Colors.white,
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Text(
-              headerText,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+        onTap: () {
+          Get.to(() => HealthSurveyPage());
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: Colors.white,
+            boxShadow: const [
+              BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+            ],
           ),
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(14),
-            ),
-            child: Container(
-              height: 180,
-              color: Colors.deepOrange.shade400,
-              alignment: Alignment.center,
-              child: const Text(
-                'Lifestyle Enhancements',
-                style: TextStyle(
-                  fontSize: 20,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Text(
+                  headerText,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
-            ),
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+                child: Container(
+                  height: 180,
+                  color: Colors.deepOrange.shade400,
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'Take a Health Check',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
+
 
   void _showOvulationToggleSheet(BuildContext ctx) {
     showModalBottomSheet(
@@ -595,10 +605,7 @@ class HomePage extends StatelessWidget {
                       const Expanded(
                         child: Text(
                           'Ovulation calculation',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),
                       IconButton(
@@ -646,5 +653,133 @@ class HomePage extends StatelessWidget {
     } catch (e) {
       debugPrint('Failed saving ovulation pref: $e');
     }
+  }
+}
+
+/// ===== Shimmer Widgets (package-free) =====
+
+class _ShimmerCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 300,
+      height: 170,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 3))],
+        border: Border.all(color: Colors.black12.withOpacity(0.06)),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // icon + chip row skeletons
+          Row(
+            children: [
+              _ShimmerBox(width: 36, height: 36, borderRadius: BorderRadius.circular(12)),
+              const SizedBox(width: 8),
+              _ShimmerBox(width: 90, height: 22, borderRadius: BorderRadius.circular(999)),
+            ],
+          ),
+          const Spacer(),
+          _ShimmerBox(width: 200, height: 16, borderRadius: BorderRadius.circular(6)),
+          const SizedBox(height: 8),
+          _ShimmerBox(width: 260, height: 12, borderRadius: BorderRadius.circular(6)),
+          const SizedBox(height: 6),
+          _ShimmerBox(width: 220, height: 12, borderRadius: BorderRadius.circular(6)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShimmerBox extends StatelessWidget {
+  final double width;
+  final double height;
+  final BorderRadius borderRadius;
+
+  const _ShimmerBox({
+    Key? key,
+    required this.width,
+    required this.height,
+    required this.borderRadius,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: const _Shimmer(),
+      ),
+    );
+  }
+}
+
+class _Shimmer extends StatefulWidget {
+  const _Shimmer({Key? key}) : super(key: key);
+
+  @override
+  State<_Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin {
+  late final AnimationController _ac;
+
+  @override
+  void initState() {
+    super.initState();
+    _ac = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ac.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Base + moving highlight
+    return AnimatedBuilder(
+      animation: _ac,
+      builder: (context, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Container(color: Colors.grey.shade200),
+                Transform.translate(
+                  offset: Offset((w + 200) * (_ac.value) - 200, 0),
+                  child: Container(
+                    width: 200,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          Colors.grey.shade200.withOpacity(0.0),
+                          Colors.grey.shade100.withOpacity(0.9),
+                          Colors.grey.shade200.withOpacity(0.0),
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }

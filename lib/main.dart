@@ -11,19 +11,20 @@ import 'package:get_storage/get_storage.dart';
 import 'app.dart';
 import 'data/repositories/authentication/authentication_repository.dart';
 import 'firebase_options.dart';
+import 'modules/home/widgets/profile/health_check/HealthSurveyPage.dart'; // contains initHealthFlow()
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 1) Load .env FIRST
+  await dotenv.load(fileName: ".env");
+
+  // 2) Now do the rest
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await GetStorage.init();
 
-  // optional: load .env if present (wrap in try/catch so missing file won't crash)
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (_) {
-    debugPrint('No .env file found or failed to load. Continuing without it.');
-  }
+  // 3) Safe to call (reads GEMINI_API_KEY from dotenv)
+  initHealthFlow();
 
   FirebaseAuth.instance.setLanguageCode('en');
 
@@ -35,7 +36,6 @@ Future<void> main() async {
     debugPrint("🛡️ App Check debug provider active (debug).");
   }
 
-  // Register repository now, but DO NOT start navigation/listener here
   Get.put(AuthenticationRepository(), permanent: true);
 
   runApp(const MyApp());

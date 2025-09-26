@@ -2,9 +2,9 @@
 // Drop-in file containing two classes to replace/upgrade your existing
 // HomeController and CalendarStrip implementations.
 
-// lib/controllers/calendar_and_controller_patch.dart
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
@@ -79,6 +79,9 @@ class HomeController extends GetxController {
 
   // UI state
   var isLoading = true.obs;
+
+  /// Cards shown on the Tips carousel.
+  /// Each card: { id, type:"mini", title, subtitle, category, icon }
   var cards = <Map<String, dynamic>>[].obs;
 
   // Profile
@@ -113,6 +116,10 @@ class HomeController extends GetxController {
   var rangeSelecting = false.obs;
   Rxn<DateTime> tempRangeStart = Rxn<DateTime>();
 
+  // ===== Tips uniqueness memory (session-level) =====
+  // Keep the last set of titles to bias against repeats on the next refresh.
+  Set<String> _lastTipTitles = {};
+
   @override
   void onInit() {
     super.onInit();
@@ -132,13 +139,398 @@ class HomeController extends GetxController {
     _recomputeCountdownsForSelected();
   }
 
+  // =========================
+  // TIPS: Gemini-powered cards
+  // =========================
   Future<void> fetchCards() async {
-    cards.value = [
-      {"id": "c1", "type": "mini", "title": "Today's chance", "subtitle": "Updating..."},
-      {"id": "c2", "type": "mini", "title": "Cycle info", "subtitle": "Check insights"},
-      {"id": "c3", "type": "mini", "title": "Tip", "subtitle": "Stay hydrated 💧"},
-    ];
+    try {
+      // 1) Try Gemini for fresh, diverse, non-repeating tips.
+      final tips = await _getTipsFromGemini();
+      if (tips.isNotEmpty) {
+        _lastTipTitles = tips.map((m) => (m['title'] ?? '').toString()).toSet();
+        cards.value = tips;
+        return;
+      }
+
+      // 2) Fallback to curated local pool with enforced diversity & uniqueness.
+      final fallback = _fallbackTipsUnique(count: 7);
+      _lastTipTitles = fallback.map((m) => (m['title'] ?? '').toString()).toSet();
+      cards.value = fallback;
+    } catch (e) {
+      debugPrint('fetchCards (tips) error: $e');
+      final fb = _fallbackTipsUnique(count: 7);
+      _lastTipTitles = fb.map((m) => (m['title'] ?? '').toString()).toSet();
+      cards.value = fb;
+    }
   }
+
+  Future<List<Map<String, dynamic>>> _getTipsFromGemini() async {
+    final key = dotenv.env['GEMINI_API_KEY'];
+    if (key == null || key.isEmpty) {
+      throw Exception('GEMINI_API_KEY missing in .env');
+    }
+
+    final endpoint = (dotenv.env['GEMINI_API_ENDPOINT']?.trim().isNotEmpty ?? false)
+        ? dotenv.env['GEMINI_API_ENDPOINT']!.trim()
+        : 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
+    // A nonce nudges the model to produce a *new* set each refresh.
+    final nonce = _rid();
+
+    // We ask for guaranteed category coverage + unique titles and small supportive subtitles.
+    // Also pass prior titles so the model avoids repeating them.
+    final prior = _lastTipTitles.isEmpty ? '[]' : jsonEncode(_lastTipTitles.toList());
+
+    final prompt = '''
+Return ONLY JSON array with 7 objects. No prose. No code fences.
+
+Goal: Fresh, friendly mini-cards about menstrual hygiene & wellness. Make them unique each call.
+
+Hard rules:
+- All 7 must be mutually different.
+- Avoid any title in this previousTitles list: $prior
+- Cover these 7 categories (exactly once each): 
+  ["Hygiene","Products","Hydration","Diet","Movement","Sleep & Relax","Cramps & Comfort"]
+- Tone: supportive, non-judgmental, no medical diagnosis/claims.
+- Keep inclusive; avoid gendered assumptions.
+- Keep tips general/safe (no medication advice).
+
+Each object fields:
+- id: short unique string
+- type: "mini"
+- title: catchy <= 22 chars
+- subtitle: concrete, specific, <= 70 chars, max 1 emoji
+- category: one of the 7 categories above
+- icon: a single relevant emoji (e.g., 🫧, 🩸, 💧, 🥗, 🧘, 😴, 🌿)
+
+Example shape only:
+[
+  {"id":"c1","type":"mini","title":"Change Often","subtitle":"Swap pads/tampons every 4–6 hrs.","category":"Hygiene","icon":"🫧"},
+  {"id":"c2","type":"mini","title":"Breathable Layers","subtitle":"Cotton undies help airflow.","category":"Products","icon":"🩸"},
+  {"id":"c3","type":"mini","title":"Water Goals","subtitle":"Aim ~8–10 glasses/day 💧","category":"Hydration","icon":"💧"},
+  {"id":"c4","type":"mini","title":"Iron+Vitamin C","subtitle":"Pair spinach with citrus to boost iron.","category":"Diet","icon":"🥗"},
+  {"id":"c5","type":"mini","title":"Gentle Walks","subtitle":"15–20 min light movement eases bloating.","category":"Movement","icon":"🚶"},
+  {"id":"c6","type":"mini","title":"Wind-Down","subtitle":"Consistent bedtime supports energy 😴","category":"Sleep & Relax","icon":"😴"},
+  {"id":"c7","type":"mini","title":"Cozy Heat","subtitle":"Warm pad or bath can soothe cramps.","category":"Cramps & Comfort","icon":"🌿"}
+]
+
+Nonce: $nonce
+''';
+
+    final payload = {
+      "contents": [
+        {
+          "parts": [
+            {"text": prompt}
+          ]
+        }
+      ]
+    };
+
+    final res = await http.post(
+      Uri.parse(endpoint),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': key,
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (res.statusCode != 200) {
+      debugPrint('Gemini tips non-200: ${res.statusCode} ${res.body}');
+      return [];
+    }
+
+    final Map<String, dynamic> body = jsonDecode(res.body);
+
+    String? modelText;
+    try {
+      final candidates = (body['candidates'] as List);
+      if (candidates.isNotEmpty) {
+        modelText = candidates[0]['content']['parts'][0]['text'] as String?;
+      }
+    } catch (_) {
+      modelText = jsonEncode(body);
+    }
+
+    final raw = modelText ?? '';
+    final jsonText = _extractJsonArray(raw);
+    final decoded = json.decode(jsonText);
+
+    if (decoded is! List) return [];
+
+    final List<Map<String, dynamic>> out = [];
+    final titlesSeen = <String>{};
+    for (final e in decoded) {
+      if (e is Map) {
+        final title = (e['title'] ?? '').toString().trim();
+        if (title.isEmpty) continue;
+        if (titlesSeen.contains(title)) continue; // ensure uniqueness in one batch
+        titlesSeen.add(title);
+
+        out.add({
+          'id': (e['id'] ?? _rid()).toString(),
+          'type': 'mini',
+          'title': title,
+          'subtitle': (e['subtitle'] ?? '').toString().trim(),
+          'category': (e['category'] ?? '').toString().trim(),
+          'icon': (e['icon'] ?? '💡').toString().trim(),
+        });
+      }
+    }
+
+    // If model missed fields, enrich minimally.
+    for (final m in out) {
+      m['type'] ??= 'mini';
+      m['id'] ??= _rid();
+      m['icon'] ??= '💡';
+      m['category'] ??= 'Hygiene';
+    }
+
+    // Keep at least 5; otherwise fall back.
+    return out.length >= 5 ? out : [];
+  }
+
+  String _extractJsonArray(String s) {
+    final start = s.indexOf('[');
+    final end = s.lastIndexOf(']');
+    if (start != -1 && end != -1 && end > start) {
+      return s.substring(start, end + 1);
+    }
+    return s.trim();
+  }
+
+  String _rid() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final r = Random.secure();
+    return 'c${List.generate(6, (_) => chars[r.nextInt(chars.length)]).join()}';
+  }
+
+  // ---------- Local curated pool + unique sampler ----------
+  List<Map<String, dynamic>> _fallbackTipsUnique({int count = 7}) {
+    final pool = _localTipPool();
+    // Remove anything that matches last batch titles to strengthen "freshness"
+    final pruned = pool.where((m) => !_lastTipTitles.contains(m['title'])).toList();
+
+    // Ensure category coverage (one per required category), then fill rest randomly.
+    const desiredCategories = [
+      'Hygiene',
+      'Products',
+      'Hydration',
+      'Diet',
+      'Movement',
+      'Sleep & Relax',
+      'Cramps & Comfort',
+      'Disposal & Environment',
+      'Travel & Backup',
+      'Tracking & Symptoms',
+    ];
+
+    final rand = Random.secure();
+    final byCat = <String, List<Map<String, dynamic>>>{};
+    for (final m in pruned) {
+      final cat = (m['category'] ?? 'Hygiene').toString();
+      byCat.putIfAbsent(cat, () => []).add(m);
+    }
+
+    // Pick up to one from the first 7 core categories for guaranteed coverage.
+    final chosen = <Map<String, dynamic>>[];
+    for (final cat in desiredCategories.take(7)) {
+      final list = byCat[cat];
+      if (list != null && list.isNotEmpty) {
+        list.shuffle(rand);
+        chosen.add(list.first);
+      }
+    }
+
+    // If we still don't have "count", fill with random *other* unique ones.
+    final titles = chosen.map((m) => m['title'] as String).toSet();
+    final remaining = pruned.where((m) => !titles.contains(m['title'])).toList()..shuffle(rand);
+    for (final m in remaining) {
+      if (chosen.length >= count) break;
+      chosen.add(m);
+    }
+
+    // Ensure at least 'count' even if pruned small.
+    if (chosen.length < count) {
+      final all = pool.where((m) => !titles.contains(m['title'])).toList()..shuffle(rand);
+      for (final m in all) {
+        if (chosen.length >= count) break;
+        chosen.add(m);
+      }
+    }
+
+    // Give fresh ids each refresh for UI uniqueness.
+    for (final m in chosen) {
+      m['id'] = _rid();
+      m['type'] = 'mini';
+    }
+    return chosen.take(count).toList();
+  }
+
+  List<Map<String, dynamic>> _localTipPool() => [
+    // Hygiene
+    {
+      'title': 'Change On Time',
+      'subtitle': 'Swap pads/tampons every 4–6 hrs for comfort.',
+      'category': 'Hygiene',
+      'icon': '🫧'
+    },
+    {
+      'title': 'Gentle Wash',
+      'subtitle': 'Use mild cleansers; skip harsh soaps or douching.',
+      'category': 'Hygiene',
+      'icon': '🫧'
+    },
+    {
+      'title': 'Air Things Out',
+      'subtitle': 'Choose breathable fabrics to reduce irritation.',
+      'category': 'Hygiene',
+      'icon': '🌬️'
+    },
+
+    // Products
+    {
+      'title': 'Right Absorbency',
+      'subtitle': 'Pick light/regular/super based on flow that day.',
+      'category': 'Products',
+      'icon': '🩸'
+    },
+    {
+      'title': 'Try Reusables',
+      'subtitle': 'Cups/discs/panties can be comfy & low-waste.',
+      'category': 'Products',
+      'icon': '♻️'
+    },
+    {
+      'title': 'Patch Test First',
+      'subtitle': 'New product? Test briefly to avoid irritation.',
+      'category': 'Products',
+      'icon': '🧪'
+    },
+
+    // Hydration
+    {
+      'title': 'Hydration Habit',
+      'subtitle': 'Aim ~8–10 glasses/day; sip regularly 💧',
+      'category': 'Hydration',
+      'icon': '💧'
+    },
+    {
+      'title': 'Electrolyte Boost',
+      'subtitle': 'Add a pinch of salts/coconut water on sweaty days.',
+      'category': 'Hydration',
+      'icon': '🥥'
+    },
+
+    // Diet
+    {
+      'title': 'Iron + C Combo',
+      'subtitle': 'Pair beans/spinach with citrus to aid iron use.',
+      'category': 'Diet',
+      'icon': '🥗'
+    },
+    {
+      'title': 'Slow Carbs',
+      'subtitle': 'Whole grains steady energy through the day.',
+      'category': 'Diet',
+      'icon': '🍞'
+    },
+    {
+      'title': 'Go Easy on Salt',
+      'subtitle': 'Less salt can help with bloating.',
+      'category': 'Diet',
+      'icon': '🧂'
+    },
+
+    // Movement
+    {
+      'title': 'Gentle Walk',
+      'subtitle': '15–20 min light movement eases stiffness.',
+      'category': 'Movement',
+      'icon': '🚶'
+    },
+    {
+      'title': 'Stretch & Breathe',
+      'subtitle': 'Slow hip/low-back stretches can soothe cramps.',
+      'category': 'Movement',
+      'icon': '🧘'
+    },
+
+    // Sleep & Relax
+    {
+      'title': 'Wind-Down',
+      'subtitle': 'Consistent bedtime supports energy 😴',
+      'category': 'Sleep & Relax',
+      'icon': '😴'
+    },
+    {
+      'title': 'Screen Dimmer',
+      'subtitle': 'Lower blue light 1 hr before bed.',
+      'category': 'Sleep & Relax',
+      'icon': '📵'
+    },
+
+    // Cramps & Comfort
+    {
+      'title': 'Cozy Heat',
+      'subtitle': 'Warm pad/bath may ease cramps & relax muscles.',
+      'category': 'Cramps & Comfort',
+      'icon': '🌿'
+    },
+    {
+      'title': 'Tea Time',
+      'subtitle': 'Herbal teas (like ginger) feel soothing for many.',
+      'category': 'Cramps & Comfort',
+      'icon': '🍵'
+    },
+
+    // Disposal & Environment
+    {
+      'title': 'Wrap & Bin',
+      'subtitle': 'Wrap used products; never flush. Keep a pouch.',
+      'category': 'Disposal & Environment',
+      'icon': '🗑️'
+    },
+    {
+      'title': 'Low-Waste Swap',
+      'subtitle': 'Consider cups/discs if they suit your routine.',
+      'category': 'Disposal & Environment',
+      'icon': '🌍'
+    },
+
+    // Travel & Backup
+    {
+      'title': 'Backup Kit',
+      'subtitle': 'Keep a spare pad, wipes & underwear in your bag.',
+      'category': 'Travel & Backup',
+      'icon': '🎒'
+    },
+    {
+      'title': 'Flow Forecast',
+      'subtitle': 'Pack extras if a heavier day is due.',
+      'category': 'Travel & Backup',
+      'icon': '📅'
+    },
+
+    // Tracking & Symptoms
+    {
+      'title': 'Note Your Pattern',
+      'subtitle': 'Track flow, cramps, mood to learn your rhythm.',
+      'category': 'Tracking & Symptoms',
+      'icon': '📝'
+    },
+    {
+      'title': 'Tag Triggers',
+      'subtitle': 'Noting foods/sleep helps spot patterns.',
+      'category': 'Tracking & Symptoms',
+      'icon': '🔎'
+    },
+  ];
+
+  // =========================
+  // END TIPS SECTION
+  // =========================
 
   Future<void> fetchUserData() async {
     final user = auth.currentUser;
@@ -160,30 +552,39 @@ class HomeController extends GetxController {
 
       if (data['last_period_start_ts'] != null) {
         if (data['last_period_start_ts'] is Timestamp) {
-          lastPeriodStart.value = (data['last_period_start_ts'] as Timestamp).toDate();
+          lastPeriodStart.value =
+              (data['last_period_start_ts'] as Timestamp).toDate();
         } else {
-          lastPeriodStart.value = DateTime.tryParse(data['last_period_start_ts'].toString());
+          lastPeriodStart.value =
+              DateTime.tryParse(data['last_period_start_ts'].toString());
         }
       }
 
-      if (data['last_period_end_ts'] != null && data['last_period_end_ts'] is Timestamp) {
-        lastPeriodEnd.value = (data['last_period_end_ts'] as Timestamp).toDate();
+      if (data['last_period_end_ts'] != null &&
+          data['last_period_end_ts'] is Timestamp) {
+        lastPeriodEnd.value =
+            (data['last_period_end_ts'] as Timestamp).toDate();
       }
 
       lastPeriodLengthDays.value =
-      (data['last_period_length_days'] ?? lastPeriodLengthDays.value) is int ? (data['last_period_length_days'] ?? lastPeriodLengthDays.value) : lastPeriodLengthDays.value;
+      (data['last_period_length_days'] ?? lastPeriodLengthDays.value) is int
+          ? (data['last_period_length_days'] ?? lastPeriodLengthDays.value)
+          : lastPeriodLengthDays.value;
 
       if (data['predicted_next_period_start_ts'] != null) {
-        predictedNextPeriodStart.value = (data['predicted_next_period_start_ts'] as Timestamp).toDate();
+        predictedNextPeriodStart.value =
+            (data['predicted_next_period_start_ts'] as Timestamp).toDate();
       } else if (data['predicted_next_period_start'] != null) {
-        predictedNextPeriodStart.value = DateTime.tryParse(data['predicted_next_period_start'].toString());
+        predictedNextPeriodStart.value = DateTime.tryParse(
+            data['predicted_next_period_start'].toString());
       }
 
       predictedBy.value = (data['predicted_by'] ?? predictedBy.value).toString();
 
       // optional: read user's preference for ovulation rule
       if (data['use_last_day_for_ovulation'] != null) {
-        useLastDayForOvulation.value = (data['use_last_day_for_ovulation'] == true);
+        useLastDayForOvulation.value =
+        (data['use_last_day_for_ovulation'] == true);
       }
 
       // fetch period history as well
@@ -202,8 +603,14 @@ class HomeController extends GetxController {
     final user = auth.currentUser;
     if (user == null) return;
     try {
-      final snap = await db.collection('Users').doc(user.uid).collection('periods').orderBy('start_ts', descending: true).get();
-      periodHistory.value = snap.docs.map((d) => PeriodEntry.fromDoc(d)).toList();
+      final snap = await db
+          .collection('Users')
+          .doc(user.uid)
+          .collection('periods')
+          .orderBy('start_ts', descending: true)
+          .get();
+      periodHistory.value =
+          snap.docs.map((d) => PeriodEntry.fromDoc(d)).toList();
     } catch (e) {
       debugPrint('fetchPeriodHistory error: $e');
     }
@@ -212,9 +619,11 @@ class HomeController extends GetxController {
   Future<void> logPeriod(DateTime start, DateTime end) async {
     final user = auth.currentUser;
     if (user == null) throw Exception('Not authenticated');
-    final docRef = db.collection('Users').doc(user.uid).collection('periods').doc();
+    final docRef =
+    db.collection('Users').doc(user.uid).collection('periods').doc();
     await docRef.set({
-      'start_ts': Timestamp.fromDate(DateTime(start.year, start.month, start.day)),
+      'start_ts':
+      Timestamp.fromDate(DateTime(start.year, start.month, start.day)),
       'end_ts': Timestamp.fromDate(DateTime(end.year, end.month, end.day)),
       'created_at': Timestamp.fromDate(DateTime.now()),
     });
@@ -234,9 +643,11 @@ class HomeController extends GetxController {
   Future<void> editPeriod(String id, DateTime start, DateTime end) async {
     final user = auth.currentUser;
     if (user == null) throw Exception('Not authenticated');
-    final docRef = db.collection('Users').doc(user.uid).collection('periods').doc(id);
+    final docRef =
+    db.collection('Users').doc(user.uid).collection('periods').doc(id);
     await docRef.update({
-      'start_ts': Timestamp.fromDate(DateTime(start.year, start.month, start.day)),
+      'start_ts':
+      Timestamp.fromDate(DateTime(start.year, start.month, start.day)),
       'end_ts': Timestamp.fromDate(DateTime(end.year, end.month, end.day)),
     });
     await fetchPeriodHistory();
@@ -246,13 +657,19 @@ class HomeController extends GetxController {
   Future<void> deletePeriod(String id) async {
     final user = auth.currentUser;
     if (user == null) throw Exception('Not authenticated');
-    await db.collection('Users').doc(user.uid).collection('periods').doc(id).delete();
+    await db
+        .collection('Users')
+        .doc(user.uid)
+        .collection('periods')
+        .doc(id)
+        .delete();
     await fetchPeriodHistory();
     // recompute local lastPeriod* values if needed
     if (periodHistory.isNotEmpty) {
       lastPeriodStart.value = periodHistory.first.start;
       lastPeriodEnd.value = periodHistory.first.end;
-      lastPeriodLengthDays.value = (lastPeriodEnd.value!.difference(lastPeriodStart.value!).inDays + 1);
+      lastPeriodLengthDays.value =
+      (lastPeriodEnd.value!.difference(lastPeriodStart.value!).inDays + 1);
     } else {
       lastPeriodStart.value = null;
       lastPeriodEnd.value = null;
@@ -265,7 +682,8 @@ class HomeController extends GetxController {
   /// update `lastPeriodStart`/`lastPeriodEnd`/`lastPeriodLengthDays`, persist to Users doc,
   /// and append to `periods` collection (and recompute).
   ///
-  Future<void> setPeriodRange(DateTime start, DateTime end, {bool fromUser = true, bool saveToHistory = true}) async {
+  Future<void> setPeriodRange(DateTime start, DateTime end,
+      {bool fromUser = true, bool saveToHistory = true}) async {
     final user = auth.currentUser;
     if (user == null) throw Exception('Not authenticated');
 
@@ -292,7 +710,8 @@ class HomeController extends GetxController {
     // Optionally save to periods history
     if (saveToHistory) {
       try {
-        final col = db.collection('Users').doc(user.uid).collection('periods');
+        final col =
+        db.collection('Users').doc(user.uid).collection('periods');
         await col.add({
           'start_ts': Timestamp.fromDate(DateTime(s.year, s.month, s.day)),
           'end_ts': Timestamp.fromDate(DateTime(e.year, e.month, e.day)),
@@ -314,8 +733,7 @@ class HomeController extends GetxController {
     _recomputeCountdowns();
     _recomputeCountdownsForSelected();
 
-    // ask Gemini for a fresh prediction using the entire history (non-blocking)
-    // We call it but do not wait here to keep UX snappy.
+    // Ask Gemini for a fresh prediction using the entire history (non-blocking)
     unawaited(callGeminiWithHistory());
   }
 
@@ -327,15 +745,13 @@ class HomeController extends GetxController {
 
   /// Called after user-saved ranges — decides whether to call Gemini; separated to keep control
   Future<void> maybeCallGeminiAfterRangeSaved() async {
-    // kept for backward compatibility; uses callGeminiWithHistory instead
     await callGeminiWithHistory();
   }
 
   /// Build a prompt from periodHistory and call Gemini; if prediction found, save it.
-  /// Build a prompt from periodHistory and call Gemini; if prediction found, save it.
   Future<void> callGeminiWithHistory() async {
     final key = dotenv.env['GEMINI_API_KEY'];
-    final endpoint = dotenv.env['GEMINI_API_ENDPOINT']; // e.g. https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    final endpoint = dotenv.env['GEMINI_API_ENDPOINT'];
     if (key == null || key.isEmpty) return;
     if (endpoint == null || endpoint.isEmpty) return;
     if (periodHistory.isEmpty) return;
@@ -344,17 +760,19 @@ class HomeController extends GetxController {
     buffer.writeln('You are a helpful cycle predictor. Return JSON only.');
     buffer.writeln('User period history (oldest first):');
 
-    final sorted = List<PeriodEntry>.from(periodHistory)..sort((a, b) => a.start.compareTo(b.start));
+    final sorted = List<PeriodEntry>.from(periodHistory)
+      ..sort((a, b) => a.start.compareTo(b.start));
     for (final e in sorted) {
-      buffer.writeln('- ${e.start.toIso8601String().split("T").first} to ${e.end.toIso8601String().split("T").first} (${(e.end.difference(e.start).inDays + 1)} days)');
+      buffer.writeln(
+          '- ${e.start.toIso8601String().split("T").first} to ${e.end.toIso8601String().split("T").first} (${(e.end.difference(e.start).inDays + 1)} days)');
     }
 
     buffer.writeln('');
     buffer.writeln(
-        'Using this history, predict the next period start date (single date) after the latest entry, give a confidence percent and short notes. Return JSON only in the form: {\"predicted_date\":\"YYYY-MM-DD\",\"confidence_percent\":80,\"notes\":\"...\"}');
+        'Using this history, predict the next period start date (single date) after the latest entry, give a confidence percent and short notes. Return JSON only in the form: {"predicted_date":"YYYY-MM-DD","confidence_percent":80,"notes":"..."}');
 
     try {
-      final url = Uri.parse(endpoint); // use env endpoint
+      final url = Uri.parse(endpoint);
       final payload = {
         "contents": [
           {
@@ -369,7 +787,6 @@ class HomeController extends GetxController {
         url,
         headers: {
           'Content-Type': 'application/json',
-          // Important: Google Gen AI expects the API key as x-goog-api-key for REST (or ?key=)
           'x-goog-api-key': key,
         },
         body: jsonEncode(payload),
@@ -381,11 +798,11 @@ class HomeController extends GetxController {
       }
 
       final Map<String, dynamic> decoded = jsonDecode(res.body);
-      // Response URI: decoded['candidates'][0]['content']['parts'][0]['text']
       String? contentText;
       try {
         contentText = (decoded['candidates'] as List).isNotEmpty
-            ? (decoded['candidates'][0]['content']['parts'][0]['text'] as String?)
+            ? (decoded['candidates'][0]['content']['parts'][0]['text']
+        as String?)
             : null;
       } catch (_) {
         contentText = jsonEncode(decoded);
@@ -393,7 +810,6 @@ class HomeController extends GetxController {
 
       final payloadStr = contentText ?? jsonEncode(decoded);
 
-      // Try parse JSON block out of the text
       final jsonMatch = RegExp(r"\{[\s\S]*\}").firstMatch(payloadStr);
       if (jsonMatch != null) {
         final j = jsonDecode(jsonMatch.group(0)!);
@@ -404,7 +820,6 @@ class HomeController extends GetxController {
         }
       }
 
-      // fallback: look for YYYY-MM-DD in body
       final dateMatch = RegExp(r'\d{4}-\d{2}-\d{2}').firstMatch(payloadStr);
       if (dateMatch != null) {
         final pred = DateTime.parse(dateMatch.group(0)!);
@@ -444,7 +859,8 @@ class HomeController extends GetxController {
 
     if (res.statusCode == 200) {
       try {
-        final Map<String, dynamic> body = jsonDecode(res.body) as Map<String, dynamic>;
+        final Map<String, dynamic> body =
+        jsonDecode(res.body) as Map<String, dynamic>;
         return body;
       } catch (e) {
         debugPrint('callGeminiPredictor decode error: $e');
@@ -456,16 +872,16 @@ class HomeController extends GetxController {
     return null;
   }
 
-
   Future<void> callGeminiAndMaybeSavePrediction() async {
-    // kept for compatibility with previous naming
     await callGeminiWithHistory();
   }
 
-  Future<void> _savePredictedFromGemini(DateTime predictedDate, String provider) async {
+  Future<void> _savePredictedFromGemini(
+      DateTime predictedDate, String provider) async {
     final user = auth.currentUser;
     if (user == null) return;
-    final dt = DateTime(predictedDate.year, predictedDate.month, predictedDate.day, 5, 30);
+    final dt =
+    DateTime(predictedDate.year, predictedDate.month, predictedDate.day, 5, 30);
     predictedNextPeriodStart.value = dt;
     predictedBy.value = provider;
     try {
@@ -505,43 +921,38 @@ class HomeController extends GetxController {
     final pDate = DateTime(p.year, p.month, p.day);
     final dayStart = DateTime(day.year, day.month, day.day);
 
-    // Position in cycle relative to pDate (0..cl-1)
     final diff = dayStart.difference(pDate).inDays;
     final pos = ((diff % cl) + cl) % cl;
 
-    // 1) period days: pos in [0, lastLen-1]
     if (pos >= 0 && pos < lastLen) return DayPhase.period;
 
-    // compute ovulation position or date depending on user setting
     if (useLastDayForOvulation.value) {
-      // if lastPeriodEnd available, compute ov as midpoint between lastPeriodEnd and nextPeriodStart
       DateTime? lastEnd;
       if (lastPeriodEnd.value != null) {
-        lastEnd = DateTime(lastPeriodEnd.value!.year, lastPeriodEnd.value!.month, lastPeriodEnd.value!.day);
+        lastEnd = DateTime(lastPeriodEnd.value!.year, lastPeriodEnd.value!.month,
+            lastPeriodEnd.value!.day);
       } else if (lastPeriodStart.value != null) {
-        // if only start available, derive end
-        lastEnd = DateTime(lastPeriodStart.value!.year, lastPeriodStart.value!.month, lastPeriodStart.value!.day).add(Duration(days: (lastLen - 1)));
+        lastEnd = DateTime(lastPeriodStart.value!.year,
+            lastPeriodStart.value!.month, lastPeriodStart.value!.day)
+            .add(Duration(days: (lastLen - 1)));
       }
 
       if (lastEnd != null) {
-        // Need the nextPeriodStart that follows that lastEnd: it's lastEnd + (cl - lastLen)
         final nextAfterLastEnd = lastEnd.add(Duration(days: cl - lastLen));
         final remaining = (nextAfterLastEnd.difference(lastEnd).inDays);
         final offset = (remaining / 2).round();
-        final ov = DateTime(lastEnd.year, lastEnd.month, lastEnd.day).add(Duration(days: offset));
+        final ov = DateTime(lastEnd.year, lastEnd.month, lastEnd.day)
+            .add(Duration(days: offset));
         final dToOv = ov.difference(dayStart).inDays;
         if (dToOv == 0) return DayPhase.ovulation;
         if (dToOv.abs() <= 3) return DayPhase.fertile;
       }
-      // fallback to midpoint method if lastEnd not present
     }
 
-    // Default: midpoint (mid-cycle) ovulation
     final ovPos = (cl / 2).round();
     if (pos == ovPos) return DayPhase.ovulation;
     if ((pos - ovPos).abs() <= 3) return DayPhase.fertile;
 
-    // pre-period: days until next period <= 10
     final daysUntilNext = (cl - pos) % cl;
     if (daysUntilNext > 0 && daysUntilNext <= 10) return DayPhase.prePeriod;
 
@@ -560,7 +971,6 @@ class HomeController extends GetxController {
 
     final pDate = DateTime(p.year, p.month, p.day);
 
-    // Find k such that candidate = p + k*cl is the cycle start <= refStart (floor)
     final diff = refStart.difference(pDate).inDays;
     final k = (diff / cl).floor();
     DateTime candidate = pDate.add(Duration(days: k * cl));
@@ -571,19 +981,21 @@ class HomeController extends GetxController {
     final currentPeriodStart = candidate;
     final nextPeriodStart = currentPeriodStart.add(Duration(days: cl));
 
-    final daysSinceCurrentPeriodStart = refStart.difference(currentPeriodStart).inDays;
+    final daysSinceCurrentPeriodStart =
+        refStart.difference(currentPeriodStart).inDays;
     final daysUntilP = nextPeriodStart.difference(refStart).inDays;
 
-    // Ovulation: use last-day rule if toggled and data exists, otherwise mid-cycle
     DateTime ovulation;
     if (useLastDayForOvulation.value) {
       if (lastPeriodEnd.value != null) {
-        final lastEnd = DateTime(lastPeriodEnd.value!.year, lastPeriodEnd.value!.month, lastPeriodEnd.value!.day);
+        final lastEnd = DateTime(lastPeriodEnd.value!.year,
+            lastPeriodEnd.value!.month, lastPeriodEnd.value!.day);
         final remaining = (cl - lastLen);
         final offset = (remaining / 2).round();
         ovulation = lastEnd.add(Duration(days: offset));
       } else {
-        ovulation = currentPeriodStart.add(Duration(days: (cl / 2).round()));
+        ovulation =
+            currentPeriodStart.add(Duration(days: (cl / 2).round()));
       }
     } else {
       ovulation = currentPeriodStart.add(Duration(days: (cl / 2).round()));
@@ -592,7 +1004,8 @@ class HomeController extends GetxController {
     final daysUntilO = ovulation.difference(refStart).inDays;
 
     String phase;
-    if (daysSinceCurrentPeriodStart >= 0 && daysSinceCurrentPeriodStart < lastLen) {
+    if (daysSinceCurrentPeriodStart >= 0 &&
+        daysSinceCurrentPeriodStart < lastLen) {
       phase = "period";
     } else if (daysUntilO == 0) {
       phase = "ovulation";
@@ -634,7 +1047,6 @@ class HomeController extends GetxController {
       }
     }
 
-    // fallback: unknown
     if (forNow) {
       daysUntilNextPeriod.value = -1;
       daysUntilOvulation.value = -1;
@@ -684,15 +1096,13 @@ class HomeController extends GetxController {
   }
 }
 
-
 /// ====== CalendarStrip (UI) ======
-// lib/controllers/calendar_and_controller_patch.dart
-// (Keep the file header and HomeController above unchanged — this snippet replaces the
-/// ====== CalendarStrip (UI) ======
+// (Unchanged from your structure, just kept here to preserve your flow)
 class CalendarStrip extends StatefulWidget {
   final HomeController controller;
   final VoidCallback? onSettingsTap;
-  const CalendarStrip({Key? key, required this.controller, this.onSettingsTap}) : super(key: key);
+  const CalendarStrip({Key? key, required this.controller, this.onSettingsTap})
+      : super(key: key);
 
   @override
   State<CalendarStrip> createState() => _CalendarStripState();
@@ -700,44 +1110,32 @@ class CalendarStrip extends StatefulWidget {
 
 class _CalendarStripState extends State<CalendarStrip> {
   late final PageController _pageController;
-  // Increased range to allow selecting previous months / next months more freely.
   static const int _rangeSpan = 1081; // +/- 540 days (~1.5 years)
   late final int _middleIndex;
 
   final int _step = 7;
 
   static const double _tileHeight = 90.0;
-  static const double _tilePadding = 6.0;
-  static const double _centerCircleSize = 72.0;
   static const double _weekdayFontSize = 12.0;
   static const Color _accent = Color(0xFF0FA79A);
-  static const Color _muted = Color(0xFF9AA3A5);
 
   late int _lastSettledIndex;
   bool _isAnimating = false;
 
   Timer? _settleTimer;
 
-  // suppression flag prevents the 'ever' listener from double-handling intentional moves
   bool _suppressControllerReaction = false;
-
-  // optional debug helper
-  void _dbg(String msg) {
-    // Uncomment for debug logs:
-    // print('[CalendarStrip] $msg');
-  }
 
   DateTime _startOfDay(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  // compute today's index relative to initialCalendarDate/middleIndex
   int get _todayIndex {
     final init = widget.controller.initialCalendarDate;
     final today = _startOfDay(DateTime.now());
-    final diff = today.difference(DateTime(init.year, init.month, init.day)).inDays;
+    final diff =
+        today.difference(DateTime(init.year, init.month, init.day)).inDays;
     return (_middleIndex + diff).clamp(0, _rangeSpan - 1).toInt();
   }
 
-  // minimal allowed index (cannot navigate to pages earlier than today's index)
   int get _minIndex => _todayIndex;
 
   @override
@@ -750,39 +1148,36 @@ class _CalendarStripState extends State<CalendarStrip> {
       viewportFraction: 1 / 7,
     );
 
-    // Listen for external changes to selectedCalendarDate and animate to them,
-    // but ignore changes while we are intentionally animating (suppressed).
-    ever<DateTime?>(widget.controller.selectedCalendarDate, (DateTime? newDate) async {
-      if (newDate == null) return;
+    ever<DateTime?>(widget.controller.selectedCalendarDate,
+            (DateTime? newDate) async {
+          if (newDate == null) return;
 
-      if (_suppressControllerReaction) {
-        _dbg('suppressed reaction to selectedCalendarDate change');
-        return;
-      }
+          if (_suppressControllerReaction) return;
 
-      final mid = widget.controller.initialCalendarDate;
-      final daysDiff = newDate.difference(DateTime(mid.year, mid.month, mid.day)).inDays;
-      var targetIndex = (_middleIndex + daysDiff).clamp(0, _rangeSpan - 1);
+          final mid = widget.controller.initialCalendarDate;
+          final daysDiff =
+              newDate.difference(DateTime(mid.year, mid.month, mid.day)).inDays;
+          var targetIndex = (_middleIndex + daysDiff).clamp(0, _rangeSpan - 1);
 
-      // ensure we never animate to an index earlier than today
-      if (targetIndex < _minIndex) targetIndex = _minIndex;
+          if (targetIndex < _minIndex) targetIndex = _minIndex;
 
-      if (!_pageController.hasClients) return;
-      final currentPage = _pageController.page ?? _pageController.initialPage.toDouble();
-      if ((currentPage - targetIndex).abs() > 0.25) {
-        _isAnimating = true;
-        try {
-          await _pageController.animateToPage(
-            targetIndex,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-          _lastSettledIndex = targetIndex;
-        } finally {
-          _isAnimating = false;
-        }
-      }
-    });
+          if (!_pageController.hasClients) return;
+          final currentPage =
+              _pageController.page ?? _pageController.initialPage.toDouble();
+          if ((currentPage - targetIndex).abs() > 0.25) {
+            _isAnimating = true;
+            try {
+              await _pageController.animateToPage(
+                targetIndex,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+              _lastSettledIndex = targetIndex;
+            } finally {
+              _isAnimating = false;
+            }
+          }
+        });
   }
 
   @override
@@ -796,7 +1191,8 @@ class _CalendarStripState extends State<CalendarStrip> {
     if (!_pageController.hasClients) return;
     if (_isAnimating) return;
     final current = _pageController.page?.round() ?? _lastSettledIndex;
-    var intended = (current + direction * _step).clamp(0, _rangeSpan - 1).toInt();
+    var intended =
+    (current + direction * _step).clamp(0, _rangeSpan - 1).toInt();
     if (intended < _minIndex) intended = _minIndex;
     if (intended == current) return;
 
@@ -810,95 +1206,21 @@ class _CalendarStripState extends State<CalendarStrip> {
       _lastSettledIndex = intended;
       final mid = widget.controller.initialCalendarDate;
       final day = mid.add(Duration(days: intended - _middleIndex));
-      if (!_isSameDate(day, widget.controller.selectedCalendarDate.value)) {
+      if (!_isSameDate(
+          day, widget.controller.selectedCalendarDate.value)) {
         widget.controller.selectedCalendarDate.value = day;
         widget.controller.recomputeNow();
       }
-    } catch (_) {
-      // ignore
     } finally {
       await Future.delayed(const Duration(milliseconds: 8));
       _isAnimating = false;
     }
   }
 
-  /// Shift the calendar by [days] (positive -> forward, negative -> backward).
-  /// Updates controller.selectedCalendarDate and animates the PageView. Uses suppression
-  /// to prevent the external listener from double-animating.
-  Future<void> shiftByDays(int days, {int durationMs = 300}) async {
-    if (!mounted) return;
-
-    final mid = widget.controller.initialCalendarDate;
-
-    // derive a safe "current" from controller (single source of truth)
-    final current = DateTime(
-      widget.controller.selectedCalendarDate.value.year,
-      widget.controller.selectedCalendarDate.value.month,
-      widget.controller.selectedCalendarDate.value.day,
-    );
-    final targetDate = current.add(Duration(days: days));
-
-    final daysDiff = targetDate.difference(DateTime(mid.year, mid.month, mid.day)).inDays;
-    var targetIndex = (_middleIndex + daysDiff).clamp(0, _rangeSpan - 1);
-    if (targetIndex < _minIndex) targetIndex = _minIndex;
-
-    // mark that we are intentionally causing a controller change so the 'ever' listener
-    // will not double-handle it.
-    _suppressControllerReaction = true;
-    _dbg('shiftByDays: targetDate=$targetDate targetIndex=$targetIndex suppress=true');
-
-    try {
-      // Update the controller (single update)
-      final safeTargetDate = mid.add(Duration(days: targetIndex - _middleIndex));
-      widget.controller.selectedCalendarDate.value = safeTargetDate;
-      widget.controller.recomputeNow();
-
-      if (!_pageController.hasClients) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          // try again after frame
-          shiftByDays(days, durationMs: durationMs);
-        });
-        return;
-      }
-
-      _isAnimating = true;
-      try {
-        await _pageController.animateToPage(
-          targetIndex,
-          duration: Duration(milliseconds: durationMs),
-          curve: Curves.easeInOut,
-        );
-        _lastSettledIndex = targetIndex;
-      } catch (e) {
-        // fallback
-        try {
-          _pageController.jumpToPage(targetIndex);
-          _lastSettledIndex = targetIndex;
-        } catch (_) {}
-      } finally {
-        // final safety jump if still not at target due to float precision
-        final after = (_pageController.page ?? _pageController.initialPage.toDouble()).round();
-        if (after != targetIndex) {
-          try {
-            _pageController.jumpToPage(targetIndex);
-            _lastSettledIndex = targetIndex;
-          } catch (_) {}
-        }
-      }
-    } finally {
-      // small gap so paint settles; then allow normal reactions again
-      await Future.delayed(const Duration(milliseconds: 10));
-      _suppressControllerReaction = false;
-      _isAnimating = false;
-      _dbg('shiftByDays: done suppress=false');
-    }
-  }
-
-  /// Animate the internal PageController to the page that corresponds to [date].
-  /// Force the strip to show (center) the given [date]. This method is also suppression-aware.
   Future<void> animateToDate(DateTime date, {int durationMs = 300}) async {
     final mid = widget.controller.initialCalendarDate;
-    final daysDiff = date.difference(DateTime(mid.year, mid.month, mid.day)).inDays;
+    final daysDiff =
+        date.difference(DateTime(mid.year, mid.month, mid.day)).inDays;
     var targetIndex = (_middleIndex + daysDiff).clamp(0, _rangeSpan - 1);
 
     if (targetIndex < _minIndex) targetIndex = _minIndex;
@@ -910,9 +1232,10 @@ class _CalendarStripState extends State<CalendarStrip> {
       return;
     }
 
-    final currentPage = (_pageController.page ?? _pageController.initialPage.toDouble()).round();
+    final currentPage =
+    (_pageController.page ?? _pageController.initialPage.toDouble())
+        .round();
 
-    // if we're already exactly there, ensure final paint by jumping
     if (currentPage == targetIndex) {
       try {
         _pageController.jumpToPage(targetIndex);
@@ -929,12 +1252,10 @@ class _CalendarStripState extends State<CalendarStrip> {
           duration: Duration(milliseconds: durationMs),
           curve: Curves.easeInOut,
         );
-      } catch (_) {
-        // ignore animation error and fallback later
-      }
-
-      // final safety: if page still not the target (floating precision / race), force it
-      final after = (_pageController.page ?? _pageController.initialPage.toDouble()).round();
+      } catch (_) {}
+      final after =
+      (_pageController.page ?? _pageController.initialPage.toDouble())
+          .round();
       if (after != targetIndex) {
         try {
           _pageController.jumpToPage(targetIndex);
@@ -948,38 +1269,28 @@ class _CalendarStripState extends State<CalendarStrip> {
     }
   }
 
-  Widget _dottedCircle(double size, Widget child) {
-    return CustomPaint(
-      painter: _DottedCirclePainter(),
-      child: SizedBox(width: size, height: size, child: Center(child: child)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     const tileMargin = 6.0;
     final totalHeight = _tileHeight + 36.0;
 
-    // We place the PageView inside a Stack and draw a fixed overlay at center
-    // which displays the white circle and the selected day. The overlay is
-    // IgnorePointer so PageView still receives gestures.
     return SizedBox(
       height: totalHeight,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Column holding month row + pageview
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Month/year row
-              Row(
+              Obx(() => Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Obx(() => Text(
-                    _formatMonthYear(widget.controller.selectedCalendarDate.value),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  )),
+                  Text(
+                    _formatMonthYear(
+                        widget.controller.selectedCalendarDate.value),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.tune),
                     tooltip: 'Ovulation settings',
@@ -988,20 +1299,23 @@ class _CalendarStripState extends State<CalendarStrip> {
                         widget.onSettingsTap!();
                       } else {
                         if (Get.context != null) {
-                          Get.snackbar('Settings', 'No settings handler attached', snackPosition: SnackPosition.BOTTOM);
+                          Get.snackbar('Settings',
+                              'No settings handler attached',
+                              snackPosition: SnackPosition.BOTTOM);
                         }
                       }
                     },
                   ),
                 ],
-              ),
+              )),
               const SizedBox(height: 4),
-              // PageView area
               Expanded(
                 child: Obx(() {
                   final mid = widget.controller.initialCalendarDate;
-                  final p = widget.controller.predictedNextPeriodStart.value;
-                  final markedDate = p != null ? DateTime(p.year, p.month, p.day) : null;
+                  final p =
+                      widget.controller.predictedNextPeriodStart.value;
+                  final markedDate =
+                  p != null ? DateTime(p.year, p.month, p.day) : null;
 
                   return NotificationListener<ScrollNotification>(
                     onNotification: (notification) {
@@ -1014,277 +1328,235 @@ class _CalendarStripState extends State<CalendarStrip> {
                       controller: _pageController,
                       itemCount: _rangeSpan,
                       padEnds: true,
-                      physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
+                      physics: const PageScrollPhysics(
+                          parent: BouncingScrollPhysics()),
                       onPageChanged: (int pageIndex) {
                         _settleTimer?.cancel();
-                        _settleTimer = Timer(const Duration(milliseconds: 120), () async {
-                          if (_isAnimating) return;
+                        _settleTimer =
+                            Timer(const Duration(milliseconds: 120), () async {
+                              if (_isAnimating) return;
 
-                          // If settled page is before today, snap back to today (enforce lower bound).
-                          if (pageIndex < _minIndex) {
-                            try {
-                              _isAnimating = true;
-                              await _pageController.animateToPage(
-                                _minIndex,
-                                duration: const Duration(milliseconds: 220),
-                                curve: Curves.easeInOut,
-                              );
-                            } catch (_) {
-                              try {
-                                _pageController.jumpToPage(_minIndex);
-                              } catch (_) {}
-                            } finally {
-                              _isAnimating = false;
-                            }
+                              if (pageIndex < _minIndex) {
+                                try {
+                                  _isAnimating = true;
+                                  await _pageController.animateToPage(
+                                    _minIndex,
+                                    duration:
+                                    const Duration(milliseconds: 220),
+                                    curve: Curves.easeInOut,
+                                  );
+                                } catch (_) {
+                                  try {
+                                    _pageController.jumpToPage(_minIndex);
+                                  } catch (_) {}
+                                } finally {
+                                  _isAnimating = false;
+                                }
 
-                            final today = mid.add(Duration(days: _minIndex - _middleIndex));
-                            if (!_isSameDate(today, widget.controller.selectedCalendarDate.value)) {
-                              widget.controller.selectedCalendarDate.value = today;
-                              widget.controller.recomputeNow();
-                            }
-                            _lastSettledIndex = _minIndex;
+                                final today = mid.add(
+                                    Duration(days: _minIndex - _middleIndex));
+                                if (!_isSameDate(today,
+                                    widget.controller.selectedCalendarDate.value)) {
+                                  widget.controller.selectedCalendarDate.value =
+                                      today;
+                                  widget.controller.recomputeNow();
+                                }
+                                _lastSettledIndex = _minIndex;
 
-                            // 🌟 Show snackbar
-                            Get.snackbar(
-                              'Not allowed',
-                              'You can’t scroll before today',
-                              snackPosition: SnackPosition.BOTTOM,
-                              duration: Duration(milliseconds: 1200),
-
-                              // styling
-                              backgroundColor: Colors.black87, // darker background for contrast
-                              colorText: Colors.white,         // text color
-                              icon: const Icon(Icons.block, color: Colors.white),
-                              snackStyle: SnackStyle.FLOATING, // floating looks nicer than grounded
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              borderRadius: 12,
-                              animationDuration: const Duration(milliseconds: 300),
-                              forwardAnimationCurve: Curves.easeOutBack,
-                              // subtle shadow to lift it off the UI
-                              // (Get.snackbar supports boxShadows)
-                              boxShadows: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.25),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            );
-
-                            return;
-                          }
-
-                          final day = mid.add(Duration(days: pageIndex - _middleIndex));
-                          if (!_isSameDate(day, widget.controller.selectedCalendarDate.value)) {
-                            widget.controller.selectedCalendarDate.value = day;
-                            widget.controller.recomputeNow();
-                          }
-                          _lastSettledIndex = pageIndex;
-                        });
-                      },
-
-                      itemBuilder: (ctx, i) {
-                        final day = mid.add(Duration(days: i - _middleIndex));
-                        final isToday = _isSameDate(day, DateTime.now());
-                        final isSelected = _isSameDate(day, widget.controller.selectedCalendarDate.value);
-                        final isMarked = (markedDate != null && _isSameDate(day, markedDate));
-
-                        final page = _pageController.hasClients ? (_pageController.page ?? _pageController.initialPage.toDouble()) : _pageController.initialPage.toDouble();
-                        final dist = (page - i).abs();
-                        final centerish = dist < 0.5; // we keep this — overlay will visually stabilize center
-
-                        // dim past dates visually but allow selection (user wants historical selection)
-                        final isPast = day.isBefore(_startOfDay(DateTime.now()));
-                        final numColor = isPast ? Colors.grey.shade400 : (isSelected || isToday ? _accent : _accent.withOpacity(0.9));
-                        final weekdayColor = Colors.grey.shade700;
-                        final caption = centerish && isToday ? 'TODAY' : _weekdayShort(day);
-
-                        // Mark if this day is part of any historical period range
-                        final isHistoricPeriodDay = widget.controller.periodHistory.any((p) => !day.isBefore(p.start) && !day.isAfter(p.end));
-
-                        return RepaintBoundary(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: tileMargin / 2, vertical: 4),
-                            child: LayoutBuilder(builder: (ctxTile, tileConstraints) {
-                              final availableH = tileConstraints.maxHeight;
-                              const captionH = 18.0;
-                              const captionSpacing = 6.0;
-                              const bottomSpacing = 4.0;
-                              final maxCircleArea = tileConstraints.maxHeight - captionH - captionSpacing - bottomSpacing;
-                              final centerCircle = _centerCircleSize;
-                              final smallCircle = 36.0;
-                              final circleSize = centerish ? (maxCircleArea.clamp(40.0, centerCircle)) : (maxCircleArea.clamp(28.0, smallCircle));
-
-                              final Widget dayNumberWidgetSized = SizedBox(
-                                width: circleSize,
-                                height: circleSize,
-                                child: Center(
-                                  child: centerish
-                                      ? Container(
-                                    // When the tile is the center tile we render nothing visible under the overlay.
-                                    width: circleSize,
-                                    height: circleSize,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.transparent,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    // keep a semantic label for a11y but visually empty
-                                    child: Center(child: Semantics(label: 'Selected day ${day.day}', child: const SizedBox.shrink())),
-                                  )
-                                      : Container(
-                                    width: circleSize,
-                                    height: circleSize,
-                                    alignment: Alignment.center,
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        '${day.day}',
-                                        style: TextStyle(fontWeight: FontWeight.w600, color: numColor, fontSize: 16),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-
-                              // Visual decoration decision:
-                              // - If day part of historical period -> show a small pink dot (unless center)
-                              // - If predicted marked -> dotted circle (unless center)
-                              final bool isTempStart = widget.controller.tempRangeStart.value != null && _isSameDate(day, widget.controller.tempRangeStart.value!);
-                              final bool isUserStart = widget.controller.lastPeriodStart.value != null && _isSameDate(day, widget.controller.lastPeriodStart.value!);
-                              final bool isUserEnd = widget.controller.lastPeriodEnd.value != null && _isSameDate(day, widget.controller.lastPeriodEnd.value!);
-
-                              Widget decoratedNumber;
-
-                              if ((isUserStart || isUserEnd) && !centerish) {
-                                // solid filled pink circle for user-saved start/end
-                                decoratedNumber = Container(
-                                  width: circleSize,
-                                  height: circleSize,
-                                  decoration: BoxDecoration(color: const Color(0xFFFF6B9D), shape: BoxShape.circle),
-                                  child: Center(child: Text('${day.day}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                                );
-                              } else if (isTempStart && !centerish) {
-                                // dotted teal to indicate in-progress selection
-                                decoratedNumber = _dottedCircle(circleSize + 6.0, dayNumberWidgetSized);
-                              } else if (isHistoricPeriodDay && !centerish) {
-                                decoratedNumber = Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    dayNumberWidgetSized,
-                                    Positioned(
-                                      bottom: 6,
-                                      child: Container(width: 8, height: 8, decoration: BoxDecoration(color: Colors.pinkAccent, shape: BoxShape.circle)),
+                                Get.snackbar(
+                                  'Not allowed',
+                                  'You can’t scroll before today',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  duration:
+                                  const Duration(milliseconds: 1200),
+                                  backgroundColor: Colors.black87,
+                                  colorText: Colors.white,
+                                  icon: const Icon(Icons.block,
+                                      color: Colors.white),
+                                  snackStyle: SnackStyle.FLOATING,
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  borderRadius: 12,
+                                  animationDuration:
+                                  const Duration(milliseconds: 300),
+                                  forwardAnimationCurve: Curves.easeOutBack,
+                                  boxShadows: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.25),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 );
-                              } else if (isMarked && !centerish) {
-                                decoratedNumber = _dottedCircle(circleSize + 8.0, dayNumberWidgetSized);
-                              } else {
-                                decoratedNumber = dayNumberWidgetSized;
+
+                                return;
                               }
 
-                              return SizedBox(
-                                height: tileConstraints.maxHeight,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(8),
-                                  // Long press starts a range selection (anchored to this date)
-                                  onLongPress: () {
-                                    final tapped = DateTime(day.year, day.month, day.day);
-                                    widget.controller.rangeSelecting.value = true;
-                                    widget.controller.tempRangeStart.value = tapped;
-                                    Get.snackbar('Select end date', 'Long-pressed start set. Now tap end date to save the period range.', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4));
-                                  },
-                                  onTap: () async {
-                                    // When in rangeSelecting mode, tapping finishes selection
-                                    if (widget.controller.rangeSelecting.value) {
-                                      final start = widget.controller.tempRangeStart.value;
-                                      if (start == null) {
-                                        // reset
-                                        widget.controller.cancelRangeSelection();
-                                        Get.snackbar('Selection cancelled', 'Start date missing, please try again', snackPosition: SnackPosition.BOTTOM);
-                                        return;
-                                      }
-                                      DateTime a = DateTime(start.year, start.month, start.day);
-                                      DateTime b = DateTime(day.year, day.month, day.day);
-                                      if (b.isBefore(a)) {
-                                        final tmp = a;
-                                        a = b;
-                                        b = tmp;
-                                      }
-                                      try {
-                                        await widget.controller.setPeriodRange(a, b, fromUser: true, saveToHistory: true);
-                                        widget.controller.cancelRangeSelection();
-                                        Get.snackbar('Saved', 'Period saved: ${a.toIso8601String().split("T").first} → ${b.toIso8601String().split("T").first}', snackPosition: SnackPosition.BOTTOM);
-                                      } catch (e) {
-                                        Get.snackbar('Error', 'Failed to save period: $e', snackPosition: SnackPosition.BOTTOM);
-                                        widget.controller.cancelRangeSelection();
-                                      }
-                                      // animate to end date
-                                      if (_pageController.hasClients) {
-                                        try {
-                                          await _pageController.animateToPage(i, duration: const Duration(milliseconds: 220), curve: Curves.easeInOut);
-                                          _lastSettledIndex = i;
-                                        } catch (_) {}
-                                      }
-                                      return;
-                                    }
+                              final day = mid.add(
+                                  Duration(days: pageIndex - _middleIndex));
+                              if (!_isSameDate(day,
+                                  widget.controller.selectedCalendarDate.value)) {
+                                widget.controller.selectedCalendarDate.value =
+                                    day;
+                                widget.controller.recomputeNow();
+                              }
+                              _lastSettledIndex = pageIndex;
+                            });
+                      },
+                      itemBuilder: (ctx, i) {
+                        final day = mid.add(Duration(days: i - _middleIndex));
+                        final isToday = _isSameDate(day, DateTime.now());
+                        final isSelected = _isSameDate(
+                            day, widget.controller.selectedCalendarDate.value);
+                        final isMarked =
+                        (markedDate != null && _isSameDate(day, markedDate));
 
-                                    // Normal single-tap behaviour: animate to tapped day and update selectedCalendarDate
-                                    if (!_pageController.hasClients) return;
-                                    if (_isAnimating) return;
-                                    _isAnimating = true;
-                                    try {
-                                      // If user tapped a page before today, snap to today instead
-                                      if (i < _minIndex) {
-                                        await _pageController.animateToPage(
-                                          _minIndex,
-                                          duration: const Duration(milliseconds: 320),
-                                          curve: Curves.easeOut,
-                                        );
-                                        final newDay = mid.add(Duration(days: _minIndex - _middleIndex));
-                                        widget.controller.selectedCalendarDate.value = newDay;
-                                        widget.controller.recomputeNow();
-                                        _lastSettledIndex = _minIndex;
-                                      } else {
-                                        await _pageController.animateToPage(
-                                          i,
-                                          duration: const Duration(milliseconds: 320),
-                                          curve: Curves.easeOut,
-                                        );
-                                        _lastSettledIndex = i;
-                                        final newDay = mid.add(Duration(days: i - _middleIndex));
-                                        widget.controller.selectedCalendarDate.value = newDay;
-                                        widget.controller.recomputeNow();
-                                      }
-                                    } catch (_) {}
-                                    finally {
-                                      await Future.delayed(const Duration(milliseconds: 8));
-                                      _isAnimating = false;
-                                    }
-                                  },
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.max,
-                                    children: [
-                                      SizedBox(
-                                        height: captionH,
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            caption.toUpperCase(),
-                                            style: TextStyle(fontSize: _weekdayFontSize, fontWeight: FontWeight.w600, color: weekdayColor),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: captionSpacing),
-                                      Flexible(child: decoratedNumber),
-                                      const SizedBox(height: bottomSpacing),
-                                      if (centerish) const SizedBox(height: 5),
-                                    ],
+                        final page = _pageController.hasClients
+                            ? (_pageController.page ??
+                            _pageController.initialPage.toDouble())
+                            : _pageController.initialPage.toDouble();
+                        final dist = (page - i).abs();
+                        final centerish = dist < 0.5;
+
+                        final isPast =
+                        day.isBefore(_startOfDay(DateTime.now()));
+                        final numColor = isPast
+                            ? Colors.grey.shade400
+                            : (isSelected || isToday
+                            ? _accent
+                            : _accent.withOpacity(0.9));
+                        final weekdayColor = Colors.grey.shade700;
+                        final caption =
+                        centerish && isToday ? 'TODAY' : _weekdayShort(day);
+
+                        final isHistoricPeriodDay = widget
+                            .controller.periodHistory
+                            .any((p) =>
+                        !day.isBefore(p.start) &&
+                            !day.isAfter(p.end));
+
+                        final double circleSize = centerish ? 68 : 36;
+
+                        Widget dayNumberWidgetSized = SizedBox(
+                          width: circleSize,
+                          height: circleSize,
+                          child: Center(
+                            child: centerish
+                                ? Container(
+                              width: circleSize,
+                              height: circleSize,
+                              decoration: const BoxDecoration(
+                                color: Colors.transparent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                  child: Semantics(
+                                      label:
+                                      'Selected day ${day.day}',
+                                      child:
+                                      const SizedBox.shrink())),
+                            )
+                                : Container(
+                              width: circleSize,
+                              height: circleSize,
+                              alignment: Alignment.center,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  '${day.day}',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: numColor,
+                                      fontSize: 16),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+
+                        bool isTempStart = widget.controller
+                            .tempRangeStart.value !=
+                            null &&
+                            _isSameDate(day,
+                                widget.controller.tempRangeStart.value!);
+                        bool isUserStart = widget
+                            .controller.lastPeriodStart.value !=
+                            null &&
+                            _isSameDate(day,
+                                widget.controller.lastPeriodStart.value!);
+                        bool isUserEnd = widget
+                            .controller.lastPeriodEnd.value !=
+                            null &&
+                            _isSameDate(day,
+                                widget.controller.lastPeriodEnd.value!);
+
+                        Widget decoratedNumber;
+
+                        if ((isUserStart || isUserEnd) && !centerish) {
+                          decoratedNumber = Container(
+                            width: circleSize,
+                            height: circleSize,
+                            decoration: const BoxDecoration(
+                                color: Color(0xFFFF6B9D),
+                                shape: BoxShape.circle),
+                            child: Center(
+                                child: Text('${day.day}',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold))),
+                          );
+                        } else if (isTempStart && !centerish) {
+                          decoratedNumber =
+                              _dottedCircle(circleSize + 6.0, dayNumberWidgetSized);
+                        } else if (isHistoricPeriodDay && !centerish) {
+                          decoratedNumber = Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              dayNumberWidgetSized,
+                              Positioned(
+                                bottom: 6,
+                                child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                        color: Colors.pinkAccent,
+                                        shape: BoxShape.circle)),
+                              ),
+                            ],
+                          );
+                        } else if (isMarked && !centerish) {
+                          decoratedNumber =
+                              _dottedCircle(circleSize + 8.0, dayNumberWidgetSized);
+                        } else {
+                          decoratedNumber = dayNumberWidgetSized;
+                        }
+
+                        return RepaintBoundary(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: tileMargin / 2, vertical: 4),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  height: 18,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      caption.toUpperCase(),
+                                      style: TextStyle(
+                                          fontSize: _weekdayFontSize,
+                                          fontWeight: FontWeight.w600,
+                                          color: weekdayColor),
+                                    ),
                                   ),
                                 ),
-                              );
-                            }),
+                                const SizedBox(height: 6),
+                                Flexible(child: decoratedNumber),
+                                const SizedBox(height: 4),
+                                if (centerish) const SizedBox(height: 5),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -1295,23 +1567,22 @@ class _CalendarStripState extends State<CalendarStrip> {
             ],
           ),
 
-          // Fixed, centered overlay circle showing the selected date.
-          // It intentionally ignores pointer events so PageView stays interactive.
-          // Tuned: slightly smaller, offset down a bit to avoid overlapping the month title.
+          // Center overlay circle
           Positioned(
             left: 0,
             right: 0,
-            top: 75, // push it a bit lower so it doesn't crowd the "September 2025" text
+            top: 75,
             bottom: 0,
             child: IgnorePointer(
               child: Center(
                 child: Obx(() {
+                  const double overlaySize = 64;
                   final sel = widget.controller.selectedCalendarDate.value;
                   final p = widget.controller.predictedNextPeriodStart.value;
-                  final isMarked = (p != null && p.year == sel.year && p.month == sel.month && p.day == sel.day);
-
-                  // Slightly reduced size and softer shadow
-                  final overlaySize = _centerCircleSize - 8.0;
+                  final isMarked = (p != null &&
+                      p.year == sel.year &&
+                      p.month == sel.month &&
+                      p.day == sel.day);
 
                   Widget circle = Container(
                     width: overlaySize,
@@ -1319,12 +1590,20 @@ class _CalendarStripState extends State<CalendarStrip> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2))],
+                      boxShadow: const [
+                        BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 6,
+                            offset: Offset(0, 2))
+                      ],
                     ),
                     child: Center(
                       child: Text(
                         '${sel.day}',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: _accent, fontSize: 18),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: _accent,
+                            fontSize: 18),
                       ),
                     ),
                   );
@@ -1346,10 +1625,21 @@ class _CalendarStripState extends State<CalendarStrip> {
       ),
     );
   }
+
+  Widget _dottedCircle(double size, Widget child) {
+    return CustomPaint(
+      painter: _DottedCirclePainter(),
+      child: SizedBox(width: size, height: size, child: Center(child: child)),
+    );
+  }
+
+  bool _isSameDate(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  String _weekdayShort(DateTime d) =>
+      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.weekday % 7];
 }
 
-
-/// Simple dotted circle painter used to wrap highlighted dates
 class _DottedCirclePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -1358,17 +1648,24 @@ class _DottedCirclePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
-    final double dashWidth = 6.0;
-    final double dashSpace = 4.0;
+    const double dashWidth = 6.0;
+    const double dashSpace = 4.0;
     final radius = (size.width / 2) - 2.0;
     final circumference = 2 * 3.1415926535 * radius;
-    final dashCount = (circumference / (dashWidth + dashSpace)).floor().clamp(4, 120);
+    final dashCount =
+    (circumference / (dashWidth + dashSpace)).floor().clamp(4, 120);
     final sweep = 2 * 3.1415926535 / dashCount;
 
     for (int i = 0; i < dashCount; i++) {
       final startAngle = i * sweep;
       final segment = sweep * (dashWidth / (dashWidth + dashSpace));
-      canvas.drawArc(Rect.fromCircle(center: Offset(size.width / 2, size.height / 2), radius: radius), startAngle, segment, false, paint);
+      canvas.drawArc(
+          Rect.fromCircle(
+              center: Offset(size.width / 2, size.height / 2), radius: radius),
+          startAngle,
+          segment,
+          false,
+          paint);
     }
   }
 
@@ -1377,36 +1674,39 @@ class _DottedCirclePainter extends CustomPainter {
 }
 
 // Helper functions
-String _weekdayShort(DateTime d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.weekday % 7];
 String _formatMonthYear(DateTime d) =>
     '${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][d.month - 1]} ${d.year}';
-bool _isSameDate(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+bool _isSameDate(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
 
 /// A small convenience pick-date function (kept for compatibility)
 Future<void> _pickDateAndUpdate(HomeController c) async {
   final picked = await showDatePicker(
     context: Get.context!,
     initialDate: c.predictedNextPeriodStart.value ?? DateTime.now(),
-    firstDate: DateTime.now().subtract(Duration(days: 365)),
-    lastDate: DateTime.now().add(Duration(days: 365 * 2)),
+    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+    lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
   );
   if (picked != null) {
     final confirm = await Get.dialog<bool>(
       AlertDialog(
-        title: Text('Update next period date?'),
-        content: Text('Set next period to ${picked.toLocal().toIso8601String().split("T").first}?'),
+        title: const Text('Update next period date?'),
+        content: Text(
+            'Set next period to ${picked.toLocal().toIso8601String().split("T").first}?'),
         actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: Text('Cancel')),
-          TextButton(onPressed: () => Get.back(result: true), child: Text('Confirm')),
+          TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Get.back(result: true), child: const Text('Confirm')),
         ],
       ),
     );
     if (confirm == true) {
       try {
         await c.updatePredictedNextPeriodStart(picked);
-        Get.snackbar('Updated', 'Next period date saved', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Updated', 'Next period date saved',
+            snackPosition: SnackPosition.BOTTOM);
       } catch (e) {
-        Get.snackbar('Error', 'Failed to save date: $e', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Error', 'Failed to save date: $e',
+            snackPosition: SnackPosition.BOTTOM);
       }
     }
   }

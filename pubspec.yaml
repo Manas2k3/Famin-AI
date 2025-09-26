@@ -57,6 +57,8 @@ dependencies:
   firebase_storage: ^13.0.1
   firebase_app_check: ^0.4.0+1
   flutter_dotenv: ^6.0.0
+  dio: ^5.9.0
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
