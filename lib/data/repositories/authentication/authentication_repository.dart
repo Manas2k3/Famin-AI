@@ -8,8 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
-// Screens in the flow
-import '../../../features/period cycle/cycleSelectionPage.dart';
 import '../../../modules/authentication/views/additional_period_related_questions.dart';
 import '../../../modules/authentication/views/birth_year_page.dart';
 import '../../../modules/authentication/views/health_conditions_page.dart';
@@ -46,6 +44,10 @@ class AuthenticationRepository extends GetxController {
   StreamSubscription<User?>? _authSub;
   bool _initialized = false;
 
+// ADD THIS ↓↓↓
+  bool _isNavigating = false;
+
+
   /// Initialize storage defaults. Do NOT navigate here.
   Future<void> init() async {
     if (_initialized) return;
@@ -73,6 +75,9 @@ class AuthenticationRepository extends GetxController {
 
   /// Call this AFTER the app is running (e.g. from SplashScreen)
   /// It sets up the auth listener and performs an initial redirect.
+
+
+
   Future<void> initAndRedirect() async {
     if (!_initialized) await init();
 
@@ -181,13 +186,12 @@ class AuthenticationRepository extends GetxController {
       return;
     }
 
-    // new period-question sequence
     // if (!bloodDone) {
     //   Get.offAll(() => const BloodGroupPage());
     //   return;
     // }
-
-    // if (!cycleRegularDone) {|
+    //
+    // if (!cycleRegularDone) {
     //   Get.offAll(() => const CycleRegularityPage());
     //   return;
     // }

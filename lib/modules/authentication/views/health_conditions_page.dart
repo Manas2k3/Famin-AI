@@ -4,9 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-
-import '../../../features/period cycle/cycleSelectionPage.dart';
 import '../../../data/repositories/authentication/authentication_repository.dart';
+import 'cycleSelectionPage.dart';
 
 class HealthConditionsPage extends StatefulWidget {
   const HealthConditionsPage({super.key});
@@ -360,7 +359,7 @@ class _HealthConditionsPageState extends State<HealthConditionsPage> {
       // proceed to cycle selection
       await Future.delayed(const Duration(milliseconds: 200));
       if (!mounted) return;
-      Get.offAll(() => const CycleSelectionPage());
+      Get.to(() => const CycleSelectionPage());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

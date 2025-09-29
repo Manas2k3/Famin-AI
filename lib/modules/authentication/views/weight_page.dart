@@ -87,7 +87,7 @@ class _WeightPageState extends State<WeightPage> {
     }, SetOptions(merge: true));
 
     AuthenticationRepository.instance.completeWeight();
-    Get.offAll(() => const BirthYearPage());
+    Get.to(() => const BirthYearPage());
   }
 
   @override
@@ -95,6 +95,7 @@ class _WeightPageState extends State<WeightPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: IconButton(onPressed: () => Get.back(), icon: Icon(Icons.arrow_back_ios_new, color: Colors.white,)),
         backgroundColor: Colors.pink.shade200,
         elevation: 0,
         title: const Text('How much do you weigh?', style: TextStyle(color: Colors.white),),

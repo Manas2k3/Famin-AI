@@ -16,10 +16,6 @@ class SucesssEmail extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
-        leading: IconButton(
-          onPressed: () => Get.offAll(() => const LoginPage()),
-          icon: const Icon(CupertinoIcons.clear),
-        ),
       ),
       body: SingleChildScrollView(
         child: Padding(

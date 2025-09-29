@@ -102,7 +102,7 @@ class _HeightPageState extends State<HeightPage> {
 
     // mark height step done and navigate to weight
     AuthenticationRepository.instance.completeHeight();
-    Get.offAll(() => const WeightPage());
+    Get.to(() => const WeightPage());
   }
 
   @override
@@ -112,6 +112,7 @@ class _HeightPageState extends State<HeightPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: IconButton(onPressed: () => Get.back(), icon: Icon(Icons.arrow_back_ios_new, color: Colors.white,)),
         backgroundColor: Colors.pink.shade200,
         elevation: 0,
         title: const Text(

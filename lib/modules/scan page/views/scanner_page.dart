@@ -3,11 +3,16 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'AnalysisResultsPage.dart';
+
 class ScannerPage extends StatefulWidget {
+
   const ScannerPage({super.key});
 
   @override
@@ -15,9 +20,10 @@ class ScannerPage extends StatefulWidget {
 }
 
 class _ScannerPageState extends State<ScannerPage> {
+
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
-
+  bool _submitting = false;
   Color get _pink => Colors.pink.shade200;
 
   @override
@@ -265,22 +271,53 @@ class _ScannerPageState extends State<ScannerPage> {
         ],
       ),
 
+
+
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: FilledButton.icon(
-            onPressed: _selectedImage == null ? null : () {/* TODO: submit file: _selectedImage */},
-            icon: const Icon(Iconsax.send_2),
-            label: const Text("Submit", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: .2)),
+            onPressed: (_selectedImage == null || _submitting)
+                ? null
+                : () async {
+              setState(() => _submitting = true);
+
+              // Fake load for ~5s
+              await Future.delayed(const Duration(seconds: 5));
+              if (!mounted) return;
+
+              setState(() => _submitting = false);
+
+              // Navigate to results, pass the picked file to show on top banner
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AnalysisResultsPage(imageFile: _selectedImage),
+                ),
+              );
+            },
+            icon: _submitting
+                ? const SizedBox(
+              width: 18, height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+            )
+                : const Icon(Iconsax.send_2),
+            label: Text(
+              _submitting ? "Analyzing..." : "Submit",
+              style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: .2),
+            ),
             style: FilledButton.styleFrom(
-              backgroundColor: _selectedImage == null ? Colors.pink.shade100 : Colors.pink.shade300,
+              backgroundColor: _selectedImage == null
+                  ? Colors.pink.shade100
+                  : (_submitting ? Colors.pink.shade200 : Colors.pink.shade300),
               foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: _selectedImage == null ? 0 : 2,
             ),
-          ).animate(target: _selectedImage == null ? 0 : 1).scale(begin: const Offset(.995, .995), end: const Offset(1, 1)),
+          )
+              .animate(target: _selectedImage == null ? 0 : 1).scale(begin: const Offset(.995, .995), end: const Offset(1, 1)),
         ),
       ),
     );

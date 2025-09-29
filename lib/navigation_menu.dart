@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'features/period cycle/cycleSelectionPage.dart';
-import 'features/scan page/scanner_page.dart';
+import 'modules/authentication/views/cycleSelectionPage.dart';
+import 'modules/scan page/views/scanner_page.dart';
 import 'modules/home/views/home_page.dart';
 import 'modules/personalisation/history.dart';
 

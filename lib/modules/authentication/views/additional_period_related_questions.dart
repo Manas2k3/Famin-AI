@@ -32,6 +32,7 @@ class _QuestionScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: IconButton(onPressed: () => Get.back(), icon: Icon(Icons.arrow_back_ios_new, color: Colors.white,)),
         backgroundColor: Colors.pink.shade200,
         elevation: 0,
         centerTitle: true,
@@ -120,8 +121,8 @@ class _BloodGroupPageState extends State<BloodGroupPage> {
   @override
   Widget build(BuildContext context) {
     return _QuestionScaffold(
-      title: 'Do you know your blood group?',
-      subtitle: 'This is optional but helps for medical context in future features.',
+      title: 'Your Blood Group?',
+      subtitle: 'This is needed for medical context in future features.',
       onNext: _saveAndNext,
       nextEnabled: true,
       child: Wrap(
@@ -130,7 +131,14 @@ class _BloodGroupPageState extends State<BloodGroupPage> {
         children: [
           for (final g in groups)
             ChoiceChip(
-              label: Text(g, style: const TextStyle(fontWeight: FontWeight.w600)),
+              checkmarkColor: Colors.white,
+              label: Text(
+                g,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: selected == g ? Colors.white : Colors.black87,
+                ),
+              ),
               selected: selected == g,
               onSelected: (v) => setState(() => selected = v ? g : null),
               selectedColor: Colors.pink.shade200.withOpacity(0.95),
@@ -139,6 +147,7 @@ class _BloodGroupPageState extends State<BloodGroupPage> {
               elevation: 2,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
+
           // Clear selection chip
           ActionChip(
             label: const Text('Prefer not to say'),
@@ -185,7 +194,7 @@ class _CycleRegularityPageState extends State<CycleRegularityPage> {
   @override
   Widget build(BuildContext context) {
     return _QuestionScaffold(
-      title: 'Are your cycles usually regular or irregular?',
+      title: 'How about your cycle?',
       subtitle: 'Choose the option that best describes your menstrual cycle rhythm.',
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -270,8 +279,10 @@ class _PeriodDurationPageState extends State<PeriodDurationPage> {
   @override
   Widget build(BuildContext context) {
     return _QuestionScaffold(
-      title: 'How many days does your period usually last?',
+      title: 'Your period length?',
       subtitle: 'Enter the typical number of days your period lasts (e.g., 5).',
+      onNext: _saveAndNext,
+      nextEnabled: true,
       child: Form(
         key: _formKey,
         child: TextFormField(
@@ -292,8 +303,6 @@ class _PeriodDurationPageState extends State<PeriodDurationPage> {
           },
         ),
       ),
-      onNext: _saveAndNext,
-      nextEnabled: true,
     );
   }
 }
@@ -334,7 +343,7 @@ class _AverageCycleLengthPageState extends State<AverageCycleLengthPage> {
     box.write('hasCompletedPeriodQuestions', true);
 
     // Navigate to HealthConditionsPage
-    Get.offAll(() => const HealthConditionsPage());
+    Get.to(() => const HealthConditionsPage());
   }
 
   @override
@@ -346,8 +355,8 @@ class _AverageCycleLengthPageState extends State<AverageCycleLengthPage> {
   @override
   Widget build(BuildContext context) {
     return _QuestionScaffold(
-      title: 'Average cycle length (optional)',
-      subtitle: 'Enter the average number of days between the start of two periods (e.g., 28). Leave blank if unknown.',
+      title: 'Average cycle length?',
+      subtitle: 'Enter the average number of days between the start of two periods (e.g., 28).',
       onNext: _saveAndFinish,
       nextEnabled: true,
       child: Form(
@@ -357,7 +366,7 @@ class _AverageCycleLengthPageState extends State<AverageCycleLengthPage> {
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
-            hintText: 'e.g., 28 days (optional)',
+            hintText: 'e.g., 28 days',
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),

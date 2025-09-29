@@ -7,6 +7,7 @@ import '../../../data/repositories/authentication/authentication_repository.dart
 import '../../../utils/constants/animation_strings.dart';
 import '../../../utils/constants/image_strings.dart';
 import '../controllers/verify_email_controller.dart';
+import '../views/signUpPage.dart';
 
 class VerifyMail extends StatelessWidget {
   const VerifyMail({super.key, required this.email});
@@ -20,7 +21,7 @@ class VerifyMail extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         leading: IconButton(
-          onPressed: () => AuthenticationRepository.instance.logOut(),
+          onPressed: () => Get.off(SignUpPage()),
           icon: const Icon(CupertinoIcons.clear),
         ),
       ),

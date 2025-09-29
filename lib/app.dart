@@ -21,8 +21,7 @@ class MyApp extends StatelessWidget {
       title: 'FlowSense',
       debugShowCheckedModeBanner: false,
       theme: feminineHealthTheme,
-      home: const SplashScreen(
-      ),
+      home: const SplashScreen(),
       getPages: [
 
         GetPage(name: '/', page: () => const SplashScreen(

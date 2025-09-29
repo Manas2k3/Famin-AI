@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'data/repositories/authentication/authentication_repository.dart';
@@ -37,6 +38,13 @@ Future<void> main() async {
   }
 
   Get.put(AuthenticationRepository(), permanent: true);
+
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+
+  final supa = Supabase.instance.client;
 
   runApp(const MyApp());
 }

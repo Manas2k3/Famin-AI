@@ -43,99 +43,187 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
         backgroundColor: surface,
         elevation: 0,
         centerTitle: true,
-        title: const Text("Tell us about your cycle", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+        title: const Text(
+          "Tell us about your cycle",
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+        ),
       ),
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18.0),
-          child: Column(children: [
-            const SizedBox(height: 6),
-            const Text("Choose the start and end date of your last period", textAlign: TextAlign.center, style: TextStyle(color: Colors.black87, fontSize: 15)),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(32), border: Border.all(color: Colors.grey.shade200)),
-              padding: const EdgeInsets.all(4),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                _segmentedButton("Month", !showYearPicker, () => setState(() => showYearPicker = false)),
-                _segmentedButton("Year", showYearPicker, () => setState(() => showYearPicker = true)),
-              ]),
-            ),
-          ]),
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              child: Padding(padding: const EdgeInsets.all(12.0), child: showYearPicker ? _buildYearPicker() : _buildMonthCalendar()),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
-          child: Column(children: [
-            Row(children: [
-              Expanded(child: _rangePreviewTile(label: "Start", date: rangeStart, placeholder: "Select")),
-              const SizedBox(width: 12),
-              Expanded(child: _rangePreviewTile(label: "End", date: rangeEnd, placeholder: "Select")),
-            ]),
-            const SizedBox(height: 12),
-            if (lengthDays != null || _loadingPrediction)
-              Row(children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Period length', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                      const SizedBox(height: 6),
-                      Text(lengthDays != null ? '$lengthDays days' : '—', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                    ]),
-                  ),
+
+      // ==== Scrollable body to prevent overflow ====
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (ctx, constraints) {
+            final double calH = _responsiveCalHeight(context); // ~45% of screen, clamped
+
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // intro + month/year toggle
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 6),
+                          const Text(
+                            "Choose the start and end date of your last period",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.black87, fontSize: 15),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(32),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            padding: const EdgeInsets.all(4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _segmentedButton("Month", !showYearPicker, () => setState(() => showYearPicker = false)),
+                                _segmentedButton("Year", showYearPicker, () => setState(() => showYearPicker = true)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // calendar card (bounded height; no Expanded)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: SizedBox(
+                            height: calH,
+                            child: showYearPicker ? _buildYearPicker() : _buildMonthCalendar(),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // range preview + prediction
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: _rangePreviewTile(label: "Start", date: rangeStart, placeholder: "Select")),
+                              const SizedBox(width: 12),
+                              Expanded(child: _rangePreviewTile(label: "End", date: rangeEnd, placeholder: "Select")),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (lengthDays != null || _loadingPrediction)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.grey.shade200),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text('Period length', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          lengthDays != null ? '$lengthDays days' : '—',
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.grey.shade200),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text('Next period (pred.)', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                                        const SizedBox(height: 6),
+                                        if (_loadingPrediction)
+                                          Row(
+                                            children: const [
+                                              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                                              SizedBox(width: 8),
+                                              Text('Predicting...', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                            ],
+                                          )
+                                        else
+                                          Text(
+                                            predictedNextPeriod != null ? _formatDate(predictedNextPeriod!) : '—',
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // CTA button
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          ),
+                          onPressed: (rangeStart != null && rangeEnd != null)
+                              ? () async {
+                            final ok = await _saveRangeToFirestore(rangeStart!, rangeEnd!);
+                            if (ok) {
+                              final user = _auth.currentUser;
+                              Get.to(() => VerifyMail(email: user?.email));
+                            }
+                          }
+                              : null,
+                          child: const Text(
+                            "Next",
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Next period (pred.)', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                      const SizedBox(height: 6),
-                      if (_loadingPrediction)
-                        Row(children: const [SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Predicting...', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600))])
-                      else
-                        Text(predictedNextPeriod != null ? _formatDate(predictedNextPeriod!) : '—', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                    ]),
-                  ),
-                ),
-              ]),
-          ]),
+              ),
+            );
+          },
         ),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-              onPressed: (rangeStart != null && rangeEnd != null)
-                  ? () async {
-                final ok = await _saveRangeToFirestore(rangeStart!, rangeEnd!);
-                if (ok) {
-                  final user = _auth.currentUser;
-                  Get.offAll(() => VerifyMail(email: user?.email));
-                }
-              }
-                  : null,
-              child: const Text("Next", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
-          ),
-        ),
-      ]),
+      ),
     );
   }
+
+  // ===== UI Helpers =====
 
   Widget _segmentedButton(String label, bool active, VoidCallback onTap) {
     return GestureDetector(
@@ -143,8 +231,14 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(color: active ? primary : Colors.transparent, borderRadius: BorderRadius.circular(28)),
-        child: Text(label, style: TextStyle(color: active ? Colors.white : Colors.black87, fontWeight: FontWeight.w600)),
+        decoration: BoxDecoration(
+          color: active ? primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(color: active ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
@@ -154,13 +248,19 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
       firstDay: firstDay,
       lastDay: lastDay,
       focusedDay: focusedDay,
-      headerStyle: HeaderStyle(titleCentered: true, formatButtonVisible: false, leftChevronIcon: const Icon(Icons.chevron_left, color: Colors.black), rightChevronIcon: const Icon(Icons.chevron_right, color: Colors.black), headerPadding: const EdgeInsets.symmetric(vertical: 8)),
+      headerStyle: HeaderStyle(
+        titleCentered: true,
+        formatButtonVisible: false,
+        leftChevronIcon: const Icon(Icons.chevron_left, color: Colors.black),
+        rightChevronIcon: const Icon(Icons.chevron_right, color: Colors.black),
+        headerPadding: const EdgeInsets.symmetric(vertical: 8),
+      ),
       availableCalendarFormats: const {CalendarFormat.month: 'Month'},
       calendarStyle: CalendarStyle(
         rangeHighlightColor: primary.withOpacity(0.12),
         rangeStartDecoration: BoxDecoration(color: primary, shape: BoxShape.circle),
         rangeEndDecoration: BoxDecoration(color: primary, shape: BoxShape.circle),
-        todayDecoration: BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+        todayDecoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
         selectedDecoration: BoxDecoration(color: primary.withOpacity(0.9), shape: BoxShape.circle),
         outsideDaysVisible: false,
       ),
@@ -177,7 +277,12 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
             return _dayTile(day.day.toString());
           }
         },
-        dowBuilder: (context, day) => Center(child: Text(_dowLabel(day.weekday), style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54))),
+        dowBuilder: (context, day) => Center(
+          child: Text(
+            _dowLabel(day.weekday),
+            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54),
+          ),
+        ),
       ),
       selectedDayPredicate: (day) => isSameDay(day, rangeStart) || isSameDay(day, rangeEnd),
       onDaySelected: (selectedDay, focused) {
@@ -206,50 +311,88 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
 
   Widget _dayTile(String label, {bool highlight = false, bool inRange = false}) {
     if (highlight) {
-      return Container(margin: const EdgeInsets.all(4), decoration: BoxDecoration(color: primary, shape: BoxShape.circle), alignment: Alignment.center, child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)));
+      return Container(
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(color: primary, shape: BoxShape.circle),
+        alignment: Alignment.center,
+        child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      );
     }
     if (inRange) {
-      return Container(margin: const EdgeInsets.all(4), decoration: BoxDecoration(color: primary.withOpacity(0.15), borderRadius: BorderRadius.circular(6)), alignment: Alignment.center, child: Text(label, style: TextStyle(color: primary, fontWeight: FontWeight.w600)));
+      return Container(
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(color: primary.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
+        alignment: Alignment.center,
+        child: Text(label, style: TextStyle(color: primary, fontWeight: FontWeight.w600)),
+      );
     }
     return Center(child: Text(label, style: const TextStyle(color: Colors.black87)));
   }
 
   Widget _buildYearPicker() {
     final currentYear = DateTime.now().year;
-    return Column(children: [
-      const SizedBox(height: 6),
-      Text("Select year", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87)),
-      const SizedBox(height: 8),
-      Expanded(
-        child: YearPicker(
-          firstDate: DateTime(1990),
-          lastDate: DateTime(currentYear),
-          selectedDate: focusedDay,
-          onChanged: (DateTime picked) {
-            setState(() {
-              final month = focusedDay.month;
-              final day = focusedDay.day;
-              final safe = DateTime(picked.year, month, day);
-              focusedDay = safe;
-              showYearPicker = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Year ${picked.year} selected — pick dates now.'), duration: const Duration(milliseconds: 900)));
-          },
+    return Column(
+      children: [
+        const SizedBox(height: 6),
+        const Text("Select year", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87)),
+        const SizedBox(height: 8),
+        Expanded(
+          child: YearPicker(
+            firstDate: DateTime(1990),
+            lastDate: DateTime(currentYear),
+            selectedDate: focusedDay,
+            onChanged: (DateTime picked) {
+              setState(() {
+                final month = focusedDay.month;
+                final day = focusedDay.day;
+                final safe = DateTime(picked.year, month, day);
+                focusedDay = safe;
+                showYearPicker = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Year ${picked.year} selected — pick dates now.'),
+                  duration: const Duration(milliseconds: 900),
+                ),
+              );
+            },
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 
   Widget _rangePreviewTile({required String label, DateTime? date, required String placeholder}) {
     final txt = date == null ? placeholder : _formatDate(date);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)), const SizedBox(height: 6), Text(txt, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))]),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          const SizedBox(height: 6),
+          Text(txt, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        ],
+      ),
     );
   }
 
-  String _formatDate(DateTime d) => "${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+  // target ~45% of screen height, clamped for sanity across devices
+  double _responsiveCalHeight(BuildContext context) {
+    final h = MediaQuery.of(context).size.height;
+    final val = h * 0.45;
+    return val.clamp(320.0, 520.0);
+  }
+
+  // ===== Logic =====
+
+  String _formatDate(DateTime d) =>
+      "${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
 
   String _dowLabel(int weekday) {
     switch (weekday) {
@@ -273,7 +416,9 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
   bool _isInRange(DateTime day) {
     if (rangeStart == null) return false;
     if (rangeEnd == null) return isSameDay(day, rangeStart);
-    return (day.isAfter(rangeStart!) && day.isBefore(rangeEnd!)) || isSameDay(day, rangeStart) || isSameDay(day, rangeEnd);
+    return (day.isAfter(rangeStart!) && day.isBefore(rangeEnd!)) ||
+        isSameDay(day, rangeStart) ||
+        isSameDay(day, rangeEnd);
   }
 
   Future<void> _recalculateDerivedValues() async {
@@ -298,10 +443,13 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
           if (userDocData!.containsKey('avg_cycle_length_days')) {
             final val = userDocData['avg_cycle_length_days'];
             if (val is num && val > 0) cycleLength = val.toInt();
-          } else if (userDocData.containsKey('last_period_start_ts') && userDocData.containsKey('previous_period_start_ts')) {
+          } else if (userDocData.containsKey('last_period_start_ts') &&
+              userDocData.containsKey('previous_period_start_ts')) {
             try {
-              final prevStart = (userDocData['previous_period_start_ts'] as Timestamp?)?.toDate();
-              final lastStart = (userDocData['last_period_start_ts'] as Timestamp?)?.toDate();
+              final prevStart =
+              (userDocData['previous_period_start_ts'] as Timestamp?)?.toDate();
+              final lastStart =
+              (userDocData['last_period_start_ts'] as Timestamp?)?.toDate();
               if (prevStart != null && lastStart != null) {
                 final inferred = lastStart.difference(prevStart).inDays;
                 if (inferred > 18 && inferred < 45) cycleLength = inferred;
@@ -315,7 +463,13 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
         lengthDays = len;
       });
 
-      await _fetchGeminiPrediction(start: rangeStart!, end: rangeEnd!, lastLength: len, inferredCycleLength: cycleLength, userDoc: userDocData);
+      await _fetchGeminiPrediction(
+        start: rangeStart!,
+        end: rangeEnd!,
+        lastLength: len,
+        inferredCycleLength: cycleLength,
+        userDoc: userDocData,
+      );
     } catch (e) {
       setState(() {
         lengthDays = len;
@@ -331,7 +485,7 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
     required int inferredCycleLength,
     Map<String, dynamic>? userDoc,
   }) async {
-    // If dotenv not initialized, or keys missing: fallback
+    // dotenv fallback
     final bool hasDotEnv = dotenv.isInitialized;
     final apiKey = hasDotEnv ? dotenv.env['GEMINI_API_KEY'] : null;
     final apiEndpoint = hasDotEnv ? dotenv.env['GEMINI_API_ENDPOINT'] : null;
@@ -363,20 +517,38 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
             'health_conditions': userDoc['health_conditions'],
             'email': userDoc['email'],
             'name': userDoc['name'],
-            'last_period_start_ts': (userDoc['last_period_start_ts'] is Timestamp) ? (userDoc['last_period_start_ts'] as Timestamp).toDate().toIso8601String() : userDoc['last_period_start_ts'],
-            'previous_period_start_ts': (userDoc['previous_period_start_ts'] is Timestamp) ? (userDoc['previous_period_start_ts'] as Timestamp).toDate().toIso8601String() : userDoc['previous_period_start_ts'],
+            'last_period_start_ts': (userDoc['last_period_start_ts'] is Timestamp)
+                ? (userDoc['last_period_start_ts'] as Timestamp).toDate().toIso8601String()
+                : userDoc['last_period_start_ts'],
+            'previous_period_start_ts': (userDoc['previous_period_start_ts'] is Timestamp)
+                ? (userDoc['previous_period_start_ts'] as Timestamp).toDate().toIso8601String()
+                : userDoc['previous_period_start_ts'],
           }
         },
         'response_format': 'iso_date',
       };
 
-      final resp = await http.post(Uri.parse(apiEndpoint), headers: {'Authorization': 'Bearer $apiKey', 'Content-Type': 'application/json'}, body: jsonEncode(payload)).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .post(
+        Uri.parse(apiEndpoint),
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(payload),
+      )
+          .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        final Map<String, dynamic> body = jsonDecode(resp.body) as Map<String, dynamic>;
+        final Map<String, dynamic> body =
+        jsonDecode(resp.body) as Map<String, dynamic>;
         String? isoDate;
-        if (body.containsKey('predicted_next_period')) isoDate = body['predicted_next_period']?.toString();
-        if (isoDate == null && body.containsKey('prediction')) isoDate = body['prediction']?.toString();
+        if (body.containsKey('predicted_next_period')) {
+          isoDate = body['predicted_next_period']?.toString();
+        }
+        if (isoDate == null && body.containsKey('prediction')) {
+          isoDate = body['prediction']?.toString();
+        }
         if (isoDate != null && isoDate.isNotEmpty) {
           try {
             final parsed = DateTime.parse(isoDate);
@@ -422,11 +594,13 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
   Future<bool> _saveRangeToFirestore(DateTime start, DateTime end) async {
     final user = _auth.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("You must be signed in to save cycle data.")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("You must be signed in to save cycle data.")));
       return false;
     }
     if (end.isBefore(start)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("End date cannot be before start date.")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("End date cannot be before start date.")));
       return false;
     }
     final int len = end.difference(start).inDays + 1;
@@ -440,20 +614,28 @@ class _CycleSelectionPageState extends State<CycleSelectionPage> {
         'cycle_updated_at': DateTime.now().toIso8601String(),
       };
       if (predictedNextPeriod != null) {
-        payload['predicted_next_period_start_ts'] = Timestamp.fromDate(predictedNextPeriod!);
-        payload['predicted_next_period_start'] = _formatDate(predictedNextPeriod!);
-        payload['predicted_by'] = (dotenv.isInitialized && dotenv.env['GEMINI_API_KEY'] != null) ? 'gemini' : 'fallback';
+        payload['predicted_next_period_start_ts'] =
+            Timestamp.fromDate(predictedNextPeriod!);
+        payload['predicted_next_period_start'] =
+            _formatDate(predictedNextPeriod!);
+        payload['predicted_by'] =
+        (dotenv.isInitialized && dotenv.env['GEMINI_API_KEY'] != null)
+            ? 'gemini'
+            : 'fallback';
       }
       final docRef = _fire.collection('Users').doc(user.uid);
       final prev = await docRef.get();
       if (prev.exists) {
         final prevData = prev.data()!;
-        if (prevData.containsKey('last_period_start_ts')) payload['previous_period_start_ts'] = prevData['last_period_start_ts'];
+        if (prevData.containsKey('last_period_start_ts')) {
+          payload['previous_period_start_ts'] = prevData['last_period_start_ts'];
+        }
       }
       await docRef.set(payload, SetOptions(merge: true));
       return true;
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to save: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Failed to save: $e")));
       return false;
     }
   }

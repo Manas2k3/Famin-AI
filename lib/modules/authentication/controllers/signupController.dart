@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
@@ -9,11 +11,14 @@ import '../../../utils/constants/image_strings.dart';
 import '../../../utils/loaders/full_screen.dart';
 import '../../../utils/loaders/loaders.dart';
 import '../views/height_page.dart';
+import '../widgets/verify_mail.dart';
 
 class SignUpController extends GetxController {
   static SignUpController get instance => Get.find();
 
   /// Observables & Controllers
+  final _fire = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
   final hidePassword = true.obs;
   final email = TextEditingController();
   final firstName = TextEditingController();
@@ -70,7 +75,8 @@ class SignUpController extends GetxController {
       );
 
 
-      Get.offAll(() => const HeightPage());
+      final user = _auth.currentUser;
+      Get.to(HeightPage());
     } catch (e, stackTrace) {
       _handleSignUpError(e, stackTrace);
     }

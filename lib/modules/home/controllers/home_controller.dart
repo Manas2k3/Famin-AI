@@ -82,8 +82,9 @@ class HomeController extends GetxController {
 
   /// Cards shown on the Tips carousel.
   /// Each card: { id, type:"mini", title, subtitle, category, icon }
-  var cards = <Map<String, dynamic>>[].obs;
-
+  final cards = <Map<String, dynamic>>[].obs;
+  late final PageController tipsPageCtrl;
+  final currentTipPage = 0.obs;
   // Profile
   var userName = ''.obs;
   var avatarUrl = ''.obs;
@@ -123,6 +124,7 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    tipsPageCtrl = PageController(viewportFraction: 0.86); // peeking next card
     initialCalendarDate = selectedCalendarDate.value;
 
     // recompute when key values change

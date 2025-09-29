@@ -22,9 +22,11 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
               const Text(
@@ -33,103 +35,88 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
               ),
               const SizedBox(height: 24),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
+              _buildCheckTile(
+                value: agreePolicy,
+                text: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(color: Colors.black87),
                     children: [
-                      _buildCheckTile(
-                        value: agreePolicy,
-                        text: RichText(
-                          text: TextSpan(
-                            style: const TextStyle(color: Colors.black87),
-                            children: [
-                              const TextSpan(text: "I agree to "),
-                              WidgetSpan(
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      Get.to(() => PrivacyPolicyPage()),
-                                  child: Text(
-                                    "Privacy Policy",
-                                    style: TextStyle(
-                                      color: Colors.pink.shade400,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const TextSpan(text: " and "),
-                              WidgetSpan(
-                                child: GestureDetector(
-                                  onTap: () {},
-                                  child: Text(
-                                    "Terms of Use",
-                                    style: TextStyle(
-                                      color: Colors.pink.shade400,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const TextSpan(text: "."),
-                            ],
+                      const TextSpan(text: "I agree to "),
+                      WidgetSpan(
+                        child: GestureDetector(
+                          onTap: () => Get.to(() => PrivacyPolicyPage()),
+                          child: Text(
+                            "Privacy Policy",
+                            style: TextStyle(
+                              color: Colors.pink.shade400,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
-                        onChanged: (v) =>
-                            setState(() => agreePolicy = v ?? false),
                       ),
-                      const SizedBox(height: 12),
-
-                      _buildCheckTile(
-                        value: agreeHealthData,
-                        text: RichText(
-                          text: TextSpan(
-                            style: const TextStyle(color: Colors.black87),
-                            children: [
-                              const TextSpan(
-                                text:
-                                    "I agree to processing of my personal health data for providing app functions. See more in ",
-                              ),
-                              WidgetSpan(
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      Get.to(() => PrivacyPolicyPage()),
-                                  child: Text(
-                                    "Privacy Policy",
-                                    style: TextStyle(
-                                      color: Colors.pink.shade400,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const TextSpan(text: "."),
-                            ],
+                      const TextSpan(text: " and "),
+                      WidgetSpan(
+                        child: GestureDetector(
+                          onTap: () {},
+                          child: Text(
+                            "Terms of Use",
+                            style: TextStyle(
+                              color: Colors.pink.shade400,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
-                        onChanged: (v) =>
-                            setState(() => agreeHealthData = v ?? false),
                       ),
-                      const SizedBox(height: 12),
-
-                      _buildCheckTile(
-                        value: agreeEmails,
-                        text: const Text(
-                          "I agree that the app may use my personal data (except health data) to send me product or service offerings via email.",
-                        ),
-                        onChanged: (v) =>
-                            setState(() => agreeEmails = v ?? false),
-                      ),
-                      const SizedBox(height: 12),
+                      const TextSpan(text: "."),
                     ],
                   ),
                 ),
+                onChanged: (v) => setState(() => agreePolicy = v ?? false),
               ),
+              const SizedBox(height: 12),
 
-              const SizedBox(height: 20),
+              _buildCheckTile(
+                value: agreeHealthData,
+                text: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(color: Colors.black87),
+                    children: [
+                      const TextSpan(
+                        text:
+                        "I agree to processing of my personal health data for providing app functions. See more in ",
+                      ),
+                      WidgetSpan(
+                        child: GestureDetector(
+                          onTap: () => Get.to(() => PrivacyPolicyPage()),
+                          child: Text(
+                            "Privacy Policy",
+                            style: TextStyle(
+                              color: Colors.pink.shade400,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const TextSpan(text: "."),
+                    ],
+                  ),
+                ),
+                onChanged: (v) => setState(() => agreeHealthData = v ?? false),
+              ),
+              const SizedBox(height: 12),
+
+              _buildCheckTile(
+                value: agreeEmails,
+                text: const Text(
+                  "I agree that the app may use my personal data (except health data) to send me product or service offerings via email.",
+                ),
+                onChanged: (v) => setState(() => agreeEmails = v ?? false),
+              ),
+              SizedBox(height: MediaQuery.of(context).size.height*0.42,),
+
+              // Buttons section
               SizedBox(
                 width: double.infinity,
-                height: MediaQuery.of(context).size.height * 0.12,
                 child: Column(
                   children: [
                     TextButton(
@@ -140,7 +127,7 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                           agreeEmails = true;
                         });
                       },
-                      child: Text(
+                      child: const Text(
                         "Select All",
                         style: TextStyle(color: Colors.black),
                       ),
@@ -148,9 +135,10 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                     ElevatedButton(
                       onPressed: (agreePolicy && agreeHealthData)
                           ? () {
-                        AuthenticationRepository.instance.completeConsent();
-                        Get.offAll(() => const OnboardingPage());
-                            }
+                        AuthenticationRepository.instance
+                            .completeConsent();
+                        Get.to(() => const OnboardingPage());
+                      }
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.pink.shade400,
@@ -164,6 +152,7 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),

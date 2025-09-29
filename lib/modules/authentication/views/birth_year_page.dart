@@ -1,7 +1,6 @@
 // lib/modules/authentication/views/birth_year_page.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:famina/features/period%20cycle/cycleSelectionPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -60,6 +59,7 @@ class _BirthYearPageState extends State<BirthYearPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: IconButton(onPressed: () => Get.back(), icon: Icon(Icons.arrow_back_ios_new, color: Colors.white,)),
         backgroundColor: Colors.pink.shade200,
         elevation: 0,
         centerTitle: true,
@@ -240,16 +240,18 @@ class _BirthYearPageState extends State<BirthYearPage> {
     box.write('pending_birth_year', selectedYear);
     box.write('pending_birth_display', '$selectedYear');
 
-    // save to Firestore for signed-in user
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      // Not signed in — save locally and go to login
       Get.snackbar('Saved locally', 'Birth year saved locally. Please sign in to persist.');
-      // mark step done locally
-      box.write('hasCompletedBirth', true);
-      // navigate to login or next screen
-      Get.offAll(() => const BloodGroupPage());
+      // Use the repo’s helper instead of writing the flag directly:
+      AuthenticationRepository.instance.completeBirth();
+      await AuthenticationRepository.instance.screenRedirect();
       return;
+
+
+// if user != null, after saving to Firestore also:
+    AuthenticationRepository.instance.completeBirth();
+    await AuthenticationRepository.instance.screenRedirect();
     }
 
     // Write to Users doc (merge)
@@ -271,7 +273,7 @@ class _BirthYearPageState extends State<BirthYearPage> {
       // (Optional) send verification and route like your weight flow:
 
       // Navigate to VerifyMail (mirrors weight flow behaviour)
-      Get.offAll(() => const BloodGroupPage());
+      Get.to(() => const BloodGroupPage());
     } catch (e) {
       // show error
       Get.snackbar('Save failed', e.toString(), backgroundColor: Colors.red.shade100);

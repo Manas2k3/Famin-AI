@@ -26,7 +26,7 @@ class OnboardingController extends GetxController {
       AuthenticationRepository.instance.completeOnboarding();
 
       // ✅ Navigate to SignUpPage
-      Get.off(() => const SignUpPage());
+      Get.to(() => const SignUpPage());
     } else {
       int page = currentPageIndex.value + 1;
       pageController.jumpToPage(page);
@@ -39,6 +39,6 @@ class OnboardingController extends GetxController {
     AuthenticationRepository.instance.completeOnboarding();
 
     // ✅ Navigate to SignUpPage
-    Get.off(() => const SignUpPage());
+    Get.to(() => const SignUpPage());
   }
 }
