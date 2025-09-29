@@ -1,9 +1,6 @@
-
-import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 import 'data/theme/themedata.dart';
 import 'modules/authentication/views/height_page.dart';
 import 'modules/authentication/views/loginPage.dart';
@@ -21,14 +18,13 @@ class MyApp extends StatelessWidget {
       title: 'FlowSense',
       debugShowCheckedModeBanner: false,
       theme: feminineHealthTheme,
-      home: const SplashScreen(),
-      getPages: [
 
-        GetPage(name: '/', page: () => const SplashScreen(
-        )),
+      initialRoute: '/',  // ✅ Use this instead of home
+
+      getPages: [
+        GetPage(name: '/', page: () => const SplashScreen()),
         GetPage(name: '/login', page: () => const LoginPage()),
         GetPage(name: '/home', page: () => HomePage()),
-        GetPage(name: '/', page: () => SplashScreen()),
         GetPage(name: '/height', page: () => const HeightPage()),
         GetPage(name: '/weight', page: () => const WeightPage()),
         GetPage(name: '/navigation', page: () => NavigationMenu()),

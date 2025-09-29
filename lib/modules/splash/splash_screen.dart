@@ -27,8 +27,6 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<Offset> _taglineOffset;
   late final Animation<double> _taglineOpacity;
 
-  Timer? _startTimer;
-
   // Palette
   static const Color kPrimaryPink = Colors.pinkAccent;
   static const Color kCoral = Color(0xFFFF6B81);
@@ -94,22 +92,32 @@ class _SplashScreenState extends State<SplashScreen>
       curve: Curves.easeOutCubic,
     ));
 
-    // Keep your redirect timing
-    bool _kickedOff = false;
+    // FIXED: Initialize auth and navigation properly
+    _initializeApp();
+  }
 
-    _startTimer = Timer(const Duration(milliseconds: 2400), () {
-      if (!mounted || _kickedOff) return;
-      _kickedOff = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        AuthenticationRepository.instance.initAndRedirect();
-      });
-    });
+  // NEW: Separate method for initialization to prevent race condition
+  Future<void> _initializeApp() async {
+    // Wait a minimum time to show the splash screen animations
+    await Future.delayed(const Duration(milliseconds: 2500));
+
+    // Now safely initialize and redirect
+    if (!mounted) return;
+
+    try {
+      final authRepo = AuthenticationRepository.instance;
+      await authRepo.initAndRedirect();
+    } catch (e) {
+      // If there's an error, still try to navigate somewhere
+      debugPrint('Splash screen initialization error: $e');
+      if (mounted) {
+        AuthenticationRepository.instance.screenRedirect();
+      }
+    }
   }
 
   @override
   void dispose() {
-    _startTimer?.cancel();
     _bgCtrl.dispose();
     _logoCtrl.dispose();
     _taglineCtrl.dispose();

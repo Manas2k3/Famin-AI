@@ -93,7 +93,8 @@ class GeminiService {
 
     final sb = StringBuffer()
       ..writeln('User profile: age=$age, BMI=$bmi.')
-      ..writeln('Provide concise, supportive, non-diagnostic lifestyle suggestions (2-4 bullets) based on the indicators and reasons below. Avoid medical claims; recommend seeing a clinician if risk is high.')
+      ..writeln(
+          'Provide concise, supportive, non-diagnostic lifestyle suggestions (2-4 bullets) based on the indicators and reasons below. Avoid medical claims; recommend seeing a clinician if risk is high.')
       ..writeln('Respond in Markdown with bullets like "* **Heading**: explanation".');
 
     details.forEach((k, v) {
@@ -122,8 +123,9 @@ class HealthCheckController extends GetxController {
   HealthCheckController({required this.api, required this.gemini});
 
   // --- Form State ---
-  final age = 25.obs;
-  final bmi = 22.0.obs;
+  final age = RxnInt();        // no default
+  final bmi = RxnDouble();     // no default
+  final isPrefilling = true.obs;
 
   // Section 2: Menstrual
   final menarcheAge = 13.obs;
@@ -181,6 +183,7 @@ class HealthCheckController extends GetxController {
   }
 
   Future<void> _prefillFromFirestore() async {
+    isPrefilling.value = true;
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
@@ -220,6 +223,8 @@ class HealthCheckController extends GetxController {
     } catch (e) {
       // ignore: avoid_print
       print('Prefill failed: $e');
+    } finally {
+      isPrefilling.value = false;
     }
   }
 
@@ -262,12 +267,16 @@ class HealthCheckController extends GetxController {
 
   // Build payload for /predict_all_with_defaults
   Map<String, dynamic> buildPayload() {
-    final bmiOverweight = bmi.value >= 25 ? 1 : 0;
+    if (age.value == null || bmi.value == null) {
+      throw Exception('Please wait while we load your profile (Age/BMI).');
+    }
+
+    final bmiOverweight = bmi.value! >= 25 ? 1 : 0;
 
     return {
       // common
-      'age': age.value,
-      'BMI': double.parse(bmi.value.toStringAsFixed(1)),
+      'age': age.value!,
+      'BMI': double.parse(bmi.value!.toStringAsFixed(1)),
 
       // anemia features
       'flow_volume_heavy': _flowHeavy(),
@@ -349,8 +358,8 @@ class HealthCheckController extends GetxController {
     }
 
     final recText = await gemini.makeRecommendation(
-      age: age.value.toString(),
-      bmi: bmi.value.toStringAsFixed(1),
+      age: age.value!.toString(),
+      bmi: bmi.value!.toStringAsFixed(1),
       details: details.map((k, v) => MapEntry(k, (v as Map<String, dynamic>))),
     );
 
@@ -410,6 +419,49 @@ List<String> formatRecommendation(String raw) {
 }
 
 // ===============================
+// UI: Tiny shimmer (no package)
+// ===============================
+class ShimmerBox extends StatefulWidget {
+  final double width, height;
+  const ShimmerBox({super.key, required this.width, required this.height});
+
+  @override
+  State<ShimmerBox> createState() => _ShimmerBoxState();
+}
+
+class _ShimmerBoxState extends State<ShimmerBox> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+  AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: LinearGradient(
+              begin: Alignment(-1 + 2 * _c.value, 0),
+              end: Alignment(1 + 2 * _c.value, 0),
+              colors: [Colors.grey.shade200, Colors.grey.shade300, Colors.grey.shade200],
+              stops: const [0.2, 0.5, 0.8],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ===============================
 // UI: Survey Page
 // ===============================
 class HealthSurveyPage extends StatelessWidget {
@@ -451,8 +503,8 @@ class HealthSurveyPage extends StatelessWidget {
     ],
   );
 
-  // ---------- NEW: stat pill ----------
-  Widget _statPill({required String label, required String value}) {
+  // ---------- stat pill with loading ----------
+  Widget _statPill({required String label, String? value, bool loading = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -462,15 +514,18 @@ class HealthSurveyPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text('$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.2)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.2)),
+          if (loading)
+            const ShimmerBox(width: 36, height: 14)
+          else
+            Text(value ?? '-', style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 
-  String _formatBmiForDisplay(double v) {
+  String _formatBmiForDisplay(double? v) {
+    if (v == null) return '-';
     final s = v.toStringAsFixed(1); // e.g., 19.0
     return s.endsWith('.0') ? '${s.substring(0, s.length - 1)}.' : s; // -> 19.
   }
@@ -479,8 +534,7 @@ class HealthSurveyPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          leading:
-          IconButton(onPressed: () => Get.offAll(NavigationMenu()), icon: const Icon(Icons.arrow_back)),
+          leading: IconButton(onPressed: () => Get.offAll(NavigationMenu()), icon: const Icon(Icons.arrow_back)),
           title: const Text('Quick Symptom Check')),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -489,11 +543,19 @@ class HealthSurveyPage extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Obx(() => _statPill(label: 'Age', value: c.age.value.toString())),
+                child: Obx(() => _statPill(
+                  label: 'Age',
+                  value: c.age.value?.toString(),
+                  loading: c.age.value == null && c.isPrefilling.value,
+                )),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Obx(() => _statPill(label: 'BMI', value: _formatBmiForDisplay(c.bmi.value))),
+                child: Obx(() => _statPill(
+                  label: 'BMI',
+                  value: _formatBmiForDisplay(c.bmi.value),
+                  loading: c.bmi.value == null && c.isPrefilling.value,
+                )),
               ),
             ],
           ),
@@ -555,31 +617,35 @@ class HealthSurveyPage extends StatelessWidget {
           _boolRow('Infertility or multiple miscarriages', c.infertilityYes),
 
           const SizedBox(height: 16),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.health_and_safety),
-            label: const Text('Get My Health Snapshot'),
-            onPressed: () async {
-              FocusScope.of(context).unfocus();
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator()),
-              );
-              try {
-                final res = await c.submitAndGetResults();
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                  Get.to(() => HealthResultPage(result: res));
+          Obx(() {
+            final ready = !c.isPrefilling.value && c.age.value != null && c.bmi.value != null;
+            return ElevatedButton.icon(
+              icon: const Icon(Icons.health_and_safety),
+              label: const Text('Get My Health Snapshot'),
+              onPressed: ready
+                  ? () async {
+                FocusScope.of(context).unfocus();
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const Center(child: CircularProgressIndicator()),
+                );
+                try {
+                  final res = await c.submitAndGetResults();
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    Get.to(() => HealthResultPage(result: res));
+                  }
+                } catch (e) {
+                  if (context.mounted) Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                  // ignore: avoid_print
+                  print(e);
                 }
-              } catch (e) {
-                if (context.mounted) Navigator.of(context).pop();
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text('Failed: $e')));
-                // ignore: avoid_print
-                print(e);
               }
-            },
-          ),
+                  : null,
+            );
+          }),
           const SizedBox(height: 24),
         ],
       ),
@@ -606,91 +672,91 @@ class HealthResultPage extends StatelessWidget {
     final formattedRecs = formatRecommendation(result.recommendation ?? '');
 
     return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-            leading: IconButton(onPressed: () => Get.offAll(NavigationMenu()), icon: const Icon(Icons.arrow_back)),
-            title: const Text('Your Health Snapshot')),
-        body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-            const SizedBox(height: 12),
-        for (final c in result.conditions)
-    Card(
-      color: Colors.grey.shade50,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 1.5,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+          leading: IconButton(onPressed: () => Get.offAll(NavigationMenu()), icon: const Icon(Icons.arrow_back)),
+          title: const Text('Your Health Snapshot')),
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-        Expanded(
-        child: Text(
-        c.name[0].toUpperCase() + c.name.substring(1),
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-      ),
-    ),
-    Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-    color: _accent(c.indicator, c.name).withOpacity(0.12),
-    borderRadius: BorderRadius.circular(999),
-    border: Border.all(color: _accent(c.indicator, c.name).withOpacity(0.5)),
-    ),
-    child: Text(
-    c.indicator,
-      style: TextStyle(color: _accent(c.indicator, c.name), fontWeight: FontWeight.w600),
-    ),
-    ),
-        ]),
-          const SizedBox(height: 8),
-          const SizedBox(height: 6),
-          for (final r in c.reasons.take(3))
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [const Text('• '), Expanded(child: Text(r))],
+        children: [
+          const SizedBox(height: 12),
+          for (final c in result.conditions)
+            Card(
+              color: Colors.grey.shade50,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 1.5,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text(
+                        c.name[0].toUpperCase() + c.name.substring(1),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _accent(c.indicator, c.name).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: _accent(c.indicator, c.name).withOpacity(0.5)),
+                      ),
+                      child: Text(
+                        c.indicator,
+                        style: TextStyle(color: _accent(c.indicator, c.name), fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
+                  for (final r in c.reasons.take(3))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [const Text('• '), Expanded(child: Text(r))],
+                      ),
+                    ),
+                ]),
               ),
             ),
-        ]),
+
+          // Personalized suggestions (Gemini)
+          if (formattedRecs.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('Personalized Suggestions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.indigo.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.indigo.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final suggestion in formattedRecs)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('• ', style: TextStyle(fontSize: 16)),
+                          Expanded(child: Text(suggestion, style: const TextStyle(fontSize: 14))),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 24),
+        ],
       ),
-    ),
-
-              // Personalized suggestions (Gemini)
-              if (formattedRecs.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const Text('Personalized Suggestions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.indigo.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.indigo.withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final suggestion in formattedRecs)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• ', style: TextStyle(fontSize: 16)),
-                              Expanded(child: Text(suggestion, style: const TextStyle(fontSize: 14))),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 24),
-            ],
-        ),
     );
   }
 }
@@ -716,4 +782,3 @@ void initHealthFlow() {
   Get.put(GeminiService(geminiApiKey), permanent: true);
   Get.put(HealthCheckController(api: Get.find(), gemini: Get.find()), permanent: true);
 }
-

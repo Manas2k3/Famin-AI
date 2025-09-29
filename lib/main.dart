@@ -17,16 +17,11 @@ import 'modules/home/widgets/profile/health_check/HealthSurveyPage.dart'; // con
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1) Load .env FIRST
   await dotenv.load(fileName: ".env");
-
-  // 2) Now do the rest
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await GetStorage.init();
 
-  // 3) Safe to call (reads GEMINI_API_KEY from dotenv)
   initHealthFlow();
-
   FirebaseAuth.instance.setLanguageCode('en');
 
   await FirebaseAppCheck.instance.activate(
@@ -37,14 +32,14 @@ Future<void> main() async {
     debugPrint("🛡️ App Check debug provider active (debug).");
   }
 
-  Get.put(AuthenticationRepository(), permanent: true);
+  // ✅ ADD THIS: Initialize auth repo before running app
+  final authRepo = Get.put(AuthenticationRepository(), permanent: true);
+  await authRepo.init(); // Only init storage, don't navigate yet
 
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
-
-  final supa = Supabase.instance.client;
 
   runApp(const MyApp());
 }

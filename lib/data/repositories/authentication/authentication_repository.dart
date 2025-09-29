@@ -1,6 +1,5 @@
 // lib/data/repositories/authentication/authentication_repository.dart
-// Modified to support the new period-question flow:
-// BirthYear -> BloodGroup -> CycleRegularity -> PeriodDuration -> AvgCycleLength -> HealthConditions
+// Modified to fix the navigation race condition
 
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -43,10 +42,7 @@ class AuthenticationRepository extends GetxController {
 
   StreamSubscription<User?>? _authSub;
   bool _initialized = false;
-
-// ADD THIS ↓↓↓
   bool _isNavigating = false;
-
 
   /// Initialize storage defaults. Do NOT navigate here.
   Future<void> init() async {
@@ -75,14 +71,14 @@ class AuthenticationRepository extends GetxController {
 
   /// Call this AFTER the app is running (e.g. from SplashScreen)
   /// It sets up the auth listener and performs an initial redirect.
-
-
-
   Future<void> initAndRedirect() async {
     if (!_initialized) await init();
 
     // prevent multiple listeners
     await _authSub?.cancel();
+
+    // IMPORTANT: Wait for auth state to be ready
+    await _auth.authStateChanges().first;
 
     _authSub = _auth.authStateChanges().listen((user) {
       // Handle sign-in/out events while app is running.
@@ -100,8 +96,6 @@ class AuthenticationRepository extends GetxController {
   }
 
   /// Reset all signup-related flags so a fresh signup flow can occur.
-  /// keepConsent / keepOnboarding are optional: set to true if you want to
-  /// preserve those steps between accounts.
   Future<void> resetSignupFlow({bool keepConsent = true, bool keepOnboarding = false}) async {
     // Keys to reset
     final keysToReset = [
@@ -138,95 +132,113 @@ class AuthenticationRepository extends GetxController {
     await screenRedirect();
   }
 
-
   /// Decide start route (can be called multiple times)
   Future<void> screenRedirect() async {
-    if (!_initialized) await init();
+    // CRITICAL: Prevent double navigation
+    if (_isNavigating) return;
+    _isNavigating = true;
 
-    final hasConsent = deviceStorage.read(_consentAcceptedKey) ?? false;
-    final hasOnboarded = deviceStorage.read(_firstLaunchKey) ?? false;
-    final signedUp = deviceStorage.read(_hasSignedUpKey) ?? false;
-    final heightDone = deviceStorage.read(_heightDoneKey) ?? false;
-    final weightDone = deviceStorage.read(_weightDoneKey) ?? false;
-    final birthDone = deviceStorage.read(_birthDoneKey) ?? false;
-    final bloodDone = deviceStorage.read(_bloodDoneKey) ?? false;
-    final cycleRegularDone = deviceStorage.read(_cycleRegularDoneKey) ?? false;
-    final periodDurationDone = deviceStorage.read(_periodDurationDoneKey) ?? false;
-    final avgCycleDone = deviceStorage.read(_avgCycleDoneKey) ?? false;
-    final healthDone = deviceStorage.read(_healthDoneKey) ?? false;
+    try {
+      if (!_initialized) await init();
 
-    // Enforce order: consent -> onboarding -> signup -> height -> weight -> birth -> blood -> cycle -> period duration -> avg cycle -> health -> auth
-    if (!hasConsent) {
-      Get.offAll(() => const PrivacyConsentPage());
-      return;
-    }
+      // Check auth state FIRST before checking other flags
+      final user = _auth.currentUser;
 
-    if (!hasOnboarded) {
-      Get.offAll(() => const OnboardingPage());
-      return;
-    }
-
-    if (!signedUp) {
-      Get.offAll(() => const SignUpPage());
-      return;
-    }
-
-    if (!heightDone) {
-      Get.offAll(() => const HeightPage());
-      return;
-    }
-
-    if (!weightDone) {
-      Get.offAll(() => const WeightPage());
-      return;
-    }
-
-    if (!birthDone) {
-      Get.offAll(() => const BirthYearPage());
-      return;
-    }
-
-    // if (!bloodDone) {
-    //   Get.offAll(() => const BloodGroupPage());
-    //   return;
-    // }
-    //
-    // if (!cycleRegularDone) {
-    //   Get.offAll(() => const CycleRegularityPage());
-    //   return;
-    // }
-    //
-    // if (!periodDurationDone) {
-    //   Get.offAll(() => const PeriodDurationPage());
-    //   return;
-    // }
-    //
-    // if (!avgCycleDone) {
-    //   Get.offAll(() => const AverageCycleLengthPage());
-    //   return;
-    // }
-
-    if (!healthDone) {
-      Get.offAll(() => const HealthConditionsPage());
-      return;
-    }
-
-
-    // final: check Firebase auth
-    final user = _auth.currentUser;
-    if (user != null) {
-      try {
-        await user.reload();
-      } catch (_) {}
-      final refreshed = _auth.currentUser;
-      if (refreshed != null && refreshed.emailVerified) {
-        Get.offAll(() => NavigationMenu());
-      } else {
-        Get.offAll(() => VerifyMail(email: refreshed?.email));
+      // If user is logged in and verified, go straight to NavigationMenu
+      if (user != null) {
+        try {
+          await user.reload();
+          final refreshedUser = _auth.currentUser;
+          if (refreshedUser != null && refreshedUser.emailVerified) {
+            // User is fully authenticated, skip all onboarding
+            Get.offAll(() => NavigationMenu());
+            return;
+          } else if (refreshedUser != null && !refreshedUser.emailVerified) {
+            // User exists but not verified
+            Get.offAll(() => VerifyMail(email: refreshedUser.email));
+            return;
+          }
+        } catch (_) {
+          // If reload fails, proceed with normal flow
+        }
       }
-    } else {
-      // If no authenticated user, send user to Signup directly (as requested)
+
+      // Now check onboarding flags only if user is not authenticated
+      final hasConsent = deviceStorage.read(_consentAcceptedKey) ?? false;
+      final hasOnboarded = deviceStorage.read(_firstLaunchKey) ?? false;
+      final signedUp = deviceStorage.read(_hasSignedUpKey) ?? false;
+      final heightDone = deviceStorage.read(_heightDoneKey) ?? false;
+      final weightDone = deviceStorage.read(_weightDoneKey) ?? false;
+      final birthDone = deviceStorage.read(_birthDoneKey) ?? false;
+      final bloodDone = deviceStorage.read(_bloodDoneKey) ?? false;
+      final cycleRegularDone = deviceStorage.read(_cycleRegularDoneKey) ?? false;
+      final periodDurationDone = deviceStorage.read(_periodDurationDoneKey) ?? false;
+      final avgCycleDone = deviceStorage.read(_avgCycleDoneKey) ?? false;
+      final healthDone = deviceStorage.read(_healthDoneKey) ?? false;
+
+      // Enforce order for new users
+      if (!hasConsent) {
+        Get.offAll(() => const PrivacyConsentPage());
+        return;
+      }
+
+      if (!hasOnboarded) {
+        Get.offAll(() => const OnboardingPage());
+        return;
+      }
+
+      if (!signedUp) {
+        Get.offAll(() => const SignUpPage());
+        return;
+      }
+
+      if (!heightDone) {
+        Get.offAll(() => const HeightPage());
+        return;
+      }
+
+      if (!weightDone) {
+        Get.offAll(() => const WeightPage());
+        return;
+      }
+
+      if (!birthDone) {
+        Get.offAll(() => const BirthYearPage());
+        return;
+      }
+
+      // Commented out as per original code
+      // if (!bloodDone) {
+      //   Get.offAll(() => const BloodGroupPage());
+      //   return;
+      // }
+      //
+      // if (!cycleRegularDone) {
+      //   Get.offAll(() => const CycleRegularityPage());
+      //   return;
+      // }
+      //
+      // if (!periodDurationDone) {
+      //   Get.offAll(() => const PeriodDurationPage());
+      //   return;
+      // }
+      //
+      // if (!avgCycleDone) {
+      //   Get.offAll(() => const AverageCycleLengthPage());
+      //   return;
+      // }
+
+      if (!healthDone) {
+        Get.offAll(() => const HealthConditionsPage());
+        return;
+      }
+
+      // If we reach here, all steps are done but user is not authenticated
+      // This shouldn't happen normally, but send to signup as fallback
       Get.offAll(() => const SignUpPage());
+
+    } finally {
+      _isNavigating = false;
     }
   }
 
@@ -234,19 +246,27 @@ class AuthenticationRepository extends GetxController {
   Future<void> _handleAuthStateChange(User? user) async {
     if (!_initialized) return;
 
-    if (user != null) {
-      try {
-        await user.reload();
-      } catch (_) {}
-      final refreshed = _auth.currentUser;
-      if (refreshed != null && refreshed.emailVerified) {
-        Get.offAll(() => NavigationMenu());
+    // Prevent double navigation
+    if (_isNavigating) return;
+    _isNavigating = true;
+
+    try {
+      if (user != null) {
+        try {
+          await user.reload();
+        } catch (_) {}
+        final refreshed = _auth.currentUser;
+        if (refreshed != null && refreshed.emailVerified) {
+          Get.offAll(() => NavigationMenu());
+        } else {
+          Get.offAll(() => VerifyMail(email: refreshed?.email));
+        }
       } else {
-        Get.offAll(() => VerifyMail(email: refreshed?.email));
+        // signed out -> re-run flow (will send to signup or appropriate step)
+        await screenRedirect();
       }
-    } else {
-      // signed out -> re-run flow (will send to signup or appropriate step)
-      await screenRedirect();
+    } finally {
+      _isNavigating = false;
     }
   }
 
