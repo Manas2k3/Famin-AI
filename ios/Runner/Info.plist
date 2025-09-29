@@ -2,10 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSCameraUsageDescription</key>
+    <string>This app needs access to your camera to capture images.</string>
+
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app needs access to your photo library to upload images.</string>
+
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>This app needs permission to save images to your library.</string>
+
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Famina</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We use the microphone to record your voice for chat.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
