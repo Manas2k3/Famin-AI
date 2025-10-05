@@ -76,7 +76,7 @@ class SignUpController extends GetxController {
 
 
       final user = _auth.currentUser;
-      Get.to(HeightPage());
+      Get.offAll(HeightPage());
     } catch (e, stackTrace) {
       _handleSignUpError(e, stackTrace);
     }

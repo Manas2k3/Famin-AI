@@ -4,157 +4,206 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http_parser/http_parser.dart' as http_parser; // ✅ fixed alias
+import 'package:path/path.dart' as p;
 
 class ChatService {
-  final String geminiApiKey;
-  final String translateApiKey;
-  final String whisperBaseUrl;
+  final String backendBaseUrl; // e.g., http://192.168.29.59:8000
 
-  ChatService({
-    required this.geminiApiKey,
-    required this.translateApiKey,
-    required this.whisperBaseUrl,
-  });
+  ChatService({required this.backendBaseUrl});
 
-  // --- Google Translate: detect language ---
-  Future<String> detectLanguage(String text) async {
-    if (text.trim().isEmpty) return 'en';
-    final uri = Uri.parse(
-      'https://translation.googleapis.com/language/translate/v2/detect?key=$translateApiKey',
-    );
-    final resp = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'q': text}),
-    );
+  /// --- Helpers ---
+  Uri _u(String path, [Map<String, String>? q]) =>
+      Uri.parse('$backendBaseUrl$path').replace(queryParameters: q);
+
+  String _joinCandidates(List<String>? candidates) =>
+      (candidates == null || candidates.isEmpty) ? '' : candidates.join(',');
+
+  /// --- 1) STT: POST /stt ---
+  /// Accepts any common audio (m4a/mp4/mp3/ogg/webm/wav/flac/aiff).
+  /// Server auto-converts & recognizes. Optional lang/candidates hints.
+  /// NEW: outLang → ask server to translate transcript to this app language.
+  Future<Map<String, dynamic>> transcribeAudio(
+      File audioFile, {
+        String? lang,               // e.g., 'hi'
+        List<String>? candidates,   // e.g., ['en','hi','bn']
+        String? outLang,            // e.g., 'or' (Odia transcript even if ASR used hi/bn)
+      }) async {
+    final qp = <String, String>{};
+    if (lang != null && lang.isNotEmpty) qp['lang'] = lang;
+    if (candidates != null && candidates.isNotEmpty) {
+      qp['candidates'] = _joinCandidates(candidates);
+    }
+    if (outLang != null && outLang.isNotEmpty) {
+      qp['out_lang'] = outLang;
+    }
+
+    final uri = _u('/stt', qp);
+
+    final req = http.MultipartRequest('POST', uri);
+    final mimeGuess = _guessMime(audioFile.path);
+    req.files.add(await http.MultipartFile.fromPath(
+      'audio',
+      audioFile.path,
+      contentType: mimeGuess == null ? null : MediaTypeParser.parse(mimeGuess),
+    ));
+
+    final streamed = await req.send();
+    final resp = await http.Response.fromStream(streamed);
     if (resp.statusCode != 200) {
-      debugPrint('Detect error: ${resp.statusCode} ${resp.body}');
-      return 'en';
+      debugPrint('STT error: ${resp.statusCode} ${resp.body}');
+      throw Exception('STT failed: ${resp.statusCode}');
     }
-    final data = jsonDecode(resp.body) as Map<String, dynamic>;
-    final det = data['data']?['detections'];
-    if (det is List && det.isNotEmpty && det.first is List && det.first.isNotEmpty) {
-      final lang = det.first.first['language']?.toString();
-      return (lang == null || lang.isEmpty) ? 'en' : lang;
-    }
-    return 'en';
+    return jsonDecode(resp.body) as Map<String, dynamic>;
   }
 
-  // --- Google Translate: translate ---
-  Future<String> translateText(String text, {required String source, required String target}) async {
-    if (text.isEmpty) return text;
-    if (source == target) return text;
-    final uri = Uri.parse(
-      'https://translation.googleapis.com/language/translate/v2?key=$translateApiKey',
-    );
-    final resp = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'q': text, 'source': source, 'target': target, 'format': 'text'}),
-    );
-    if (resp.statusCode != 200) {
-      debugPrint('Translate error: ${resp.statusCode} ${resp.body}');
-      return text;
-    }
-    final data = jsonDecode(resp.body) as Map<String, dynamic>;
-    final translations = data['data']?['translations'];
-    if (translations is List && translations.isNotEmpty) {
-      return (translations.first['translatedText'] ?? text).toString();
-    }
-    return text;
-  }
-
-  // --- Gemini: text generation ---
-  Future<String> askGemini(String prompt) async {
-    if (prompt.trim().isEmpty) return "Say the word and I’ll purr back. 🐾";
-    final uri = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$geminiApiKey',
-    );
+  /// --- 2) Chat: POST /message ---
+  /// Sends user text to server; server handles language, translation, Gemini, and optional TTS.
+  Future<Map<String, dynamic>> sendMessage({
+    required String sessionId,
+    required String message,
+    bool speechOut = false,
+    String? replyLang,       // e.g., 'en' | 'hi' | 'or'
+    String? replyStyle,      // e.g., 'hinglish'
+    String? ttsLang,         // override TTS output voice language
+  }) async {
+    final uri = _u('/message');
     final payload = {
-      "contents": [
-        {
-          "parts": [
-            {"text": prompt}
-          ]
-        }
-      ],
-      "generationConfig": {
-        "temperature": 0.8,
-        "topP": 0.9,
-        "maxOutputTokens": 512
-      }
+      'session_id': sessionId,
+      'message': message,
+      'speech_out': speechOut,
+      if (replyLang != null) 'reply_lang': replyLang,
+      if (replyStyle != null) 'reply_style': replyStyle,
+      if (ttsLang != null) 'tts_lang': ttsLang,
     };
-    final resp = await http.post(uri,
-        headers: {'Content-Type': 'application/json'}, body: jsonEncode(payload));
+
+    final resp = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
     if (resp.statusCode != 200) {
-      debugPrint('Gemini error: ${resp.statusCode} ${resp.body}');
-      return "I tripped over a thought. Try again?";
+      debugPrint('Message error: ${resp.statusCode} ${resp.body}');
+      throw Exception('Message failed: ${resp.statusCode}');
     }
-    final data = jsonDecode(resp.body) as Map<String, dynamic>;
-    final candidates = data['candidates'];
-    if (candidates is List && candidates.isNotEmpty) {
-      final parts = candidates.first['content']?['parts'];
-      if (parts is List && parts.isNotEmpty) {
-        return parts.first['text']?.toString() ?? "Hmm… say that again?";
-      }
-    }
-    return "Hmm… didn’t catch that. Ask me again?";
+    return jsonDecode(resp.body) as Map<String, dynamic>;
   }
 
-  // --- OpenWhisper (local) : speech-to-text ---
-  // Expects POST /transcribe with multipart field: "file"
-  Future<Map<String, String>> transcribeAudio(File audioFile, {String? langHint}) async {
-    try {
-      final req = http.MultipartRequest(
-        'POST',
-        Uri.parse('$whisperBaseUrl/transcribe'),
-      );
-      req.files.add(await http.MultipartFile.fromPath('file', audioFile.path));
-      if (langHint != null && langHint.isNotEmpty) {
-        req.fields['language'] = langHint; // optional, depends on your server
-      }
-      final streamed = await req.send();
-      final resp = await http.Response.fromStream(streamed);
-
-      if (resp.statusCode != 200) {
-        debugPrint('Whisper error: ${resp.statusCode} ${resp.body}');
-        return {'text': '', 'lang': 'en'};
-      }
-      final data = jsonDecode(resp.body);
-      final text = (data['text'] ?? '').toString();
-      final lang = (data['lang'] ?? '').toString();
-      return {
-        'text': text,
-        'lang': lang.isEmpty ? 'auto' : lang,
-      };
-    } catch (e) {
-      debugPrint('Whisper exception: $e');
-      return {'text': '', 'lang': 'en'};
+  /// --- 3) TTS only: POST /tts ---
+  Future<Map<String, dynamic>> tts({
+    required String text,
+    String lang = 'en',
+  }) async {
+    final uri = _u('/tts');
+    final resp = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'text': text, 'lang': lang}),
+    );
+    if (resp.statusCode != 200) {
+      debugPrint('TTS error: ${resp.statusCode} ${resp.body}');
+      throw Exception('TTS failed: ${resp.statusCode}');
     }
+    return jsonDecode(resp.body) as Map<String, dynamic>;
   }
 
-  // --- Orchestrate: text (detect → translate → gemini → translate back) ---
-  Future<(String reply, String detectedLang)> chatOnce(String userText, {String? userLangOverride}) async {
-    final detected = userLangOverride ?? await detectLanguage(userText);
-    final toEnglish = (detected == 'en')
-        ? userText
-        : await translateText(userText, source: detected, target: 'en');
+  /// --- 4) Convenience: audio -> transcript -> reply (+ optional audio out) ---
+  /// NEW: sttOutLang threads through to /stt (e.g., 'or' for Odia transcript output).
+  Future<Map<String, dynamic>> chatFromAudio({
+    required String sessionId,
+    required File audioFile,
+    bool speechOut = true,          // get voice reply back by default
+    String? sttLang,                // e.g., 'hi'
+    List<String>? sttCandidates,    // e.g., ['en','hi','bn']
+    String? sttOutLang,             // e.g., 'or'
+    String? replyLang,              // force reply language
+    String? replyStyle,             // 'hinglish'
+    String? ttsLang,                // override TTS voice
+  }) async {
+    final sttRes = await transcribeAudio(
+      audioFile,
+      lang: sttLang,
+      candidates: sttCandidates,
+      outLang: sttOutLang, // ✅
+    );
+    final transcript = (sttRes['text'] ?? '').toString();
 
-    final replyEn = await askGemini(toEnglish);
+    final msgRes = await sendMessage(
+      sessionId: sessionId,
+      message: transcript,
+      speechOut: speechOut,
+      replyLang: replyLang,
+      replyStyle: replyStyle,
+      ttsLang: ttsLang,
+    );
 
-    final back = (detected == 'en')
-        ? replyEn
-        : await translateText(replyEn, source: 'en', target: detected);
-
-    return (back, detected);
+    return {
+      'stt': sttRes,
+      'chat': msgRes,
+    };
   }
 
-  // Simple factory
+  /// --- Optional: GET /voices, useful for settings screens ---
+  Future<Map<String, dynamic>> getVoices() async {
+    final resp = await http.get(_u('/voices'));
+    if (resp.statusCode != 200) {
+      debugPrint('Voices error: ${resp.statusCode} ${resp.body}');
+      throw Exception('Voices failed: ${resp.statusCode}');
+    }
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
+
+  /// --- Utility: decode audio_base64 from server to bytes (MP3) ---
+  Uint8List? decodeAudioBase64(Map<String, dynamic> chatResponse) {
+    final b64 = chatResponse['audio_base64'];
+    if (b64 is String && b64.isNotEmpty) {
+      return base64Decode(b64);
+    }
+    return null;
+  }
+
+  /// Simple factory from .env
   static ChatService fromEnv() {
     return ChatService(
-      geminiApiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
-      translateApiKey: dotenv.env['GOOGLE_TRANSLATE_API_KEY'] ?? '',
-      whisperBaseUrl: dotenv.env['WHISPER_BASE_URL'] ?? 'http://127.0.0.1:8080',
+      backendBaseUrl: dotenv.env['BACKEND_BASE_URL'] ?? 'https://famin-ai-chatbot-api-506773688937.asia-south1.run.app',
     );
+  }
+}
+
+/// --- Minimal MIME helper (uses http_parser alias correctly) ---
+class MediaTypeParser {
+  static http_parser.MediaType? parse(String s) {
+    try {
+      final parts = s.split('/');
+      if (parts.length != 2) return null;
+      return http_parser.MediaType(parts[0], parts[1]);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+String? _guessMime(String path) {
+  final ext = p.extension(path).toLowerCase();
+  switch (ext) {
+    case '.wav':
+      return 'audio/wav';
+    case '.flac':
+      return 'audio/flac';
+    case '.aiff':
+    case '.aif':
+      return 'audio/aiff';
+    case '.mp3':
+      return 'audio/mpeg';
+    case '.m4a':
+      return 'audio/mp4';
+    case '.mp4':
+      return 'audio/mp4';
+    case '.ogg':
+      return 'audio/ogg';
+    case '.webm':
+      return 'audio/webm';
+    default:
+      return null;
   }
 }

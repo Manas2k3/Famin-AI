@@ -133,142 +133,98 @@ class AuthenticationRepository extends GetxController {
   }
 
   /// Decide start route (can be called multiple times)
+  // authentication_repository.dart (only the changed parts)
+
   Future<void> screenRedirect() async {
-    // CRITICAL: Prevent double navigation
     if (_isNavigating) return;
     _isNavigating = true;
 
     try {
       if (!_initialized) await init();
 
-      // Check auth state FIRST before checking other flags
       final user = _auth.currentUser;
-
-      // If user is logged in and verified, go straight to NavigationMenu
-      if (user != null) {
-        try {
-          await user.reload();
-          final refreshedUser = _auth.currentUser;
-          if (refreshedUser != null && refreshedUser.emailVerified) {
-            // User is fully authenticated, skip all onboarding
-            Get.offAll(() => NavigationMenu());
-            return;
-          } else if (refreshedUser != null && !refreshedUser.emailVerified) {
-            // User exists but not verified
-            Get.offAll(() => VerifyMail(email: refreshedUser.email));
-            return;
-          }
-        } catch (_) {
-          // If reload fails, proceed with normal flow
-        }
-      }
-
-      // Now check onboarding flags only if user is not authenticated
+      // read flags up front
       final hasConsent = deviceStorage.read(_consentAcceptedKey) ?? false;
       final hasOnboarded = deviceStorage.read(_firstLaunchKey) ?? false;
       final signedUp = deviceStorage.read(_hasSignedUpKey) ?? false;
       final heightDone = deviceStorage.read(_heightDoneKey) ?? false;
       final weightDone = deviceStorage.read(_weightDoneKey) ?? false;
       final birthDone = deviceStorage.read(_birthDoneKey) ?? false;
-      final bloodDone = deviceStorage.read(_bloodDoneKey) ?? false;
-      final cycleRegularDone = deviceStorage.read(_cycleRegularDoneKey) ?? false;
-      final periodDurationDone = deviceStorage.read(_periodDurationDoneKey) ?? false;
-      final avgCycleDone = deviceStorage.read(_avgCycleDoneKey) ?? false;
       final healthDone = deviceStorage.read(_healthDoneKey) ?? false;
 
-      // Enforce order for new users
-      if (!hasConsent) {
-        Get.offAll(() => const PrivacyConsentPage());
-        return;
-      }
+      // helper to push the first incomplete step
+      Future<void> _routeToFirstIncompleteStep() async {
+        if (!hasConsent)         { Get.offAll(() => const PrivacyConsentPage()); return; }
+        if (!hasOnboarded)       { Get.offAll(() => const OnboardingPage());     return; }
+        if (!signedUp)           { Get.offAll(() => const SignUpPage());         return; }
+        if (!heightDone)         { Get.offAll(() => const HeightPage());         return; }
+        if (!weightDone)         { Get.offAll(() => const WeightPage());         return; }
+        if (!birthDone)          { Get.offAll(() => const BirthYearPage());      return; }
+        if (!healthDone)         { Get.offAll(() => const HealthConditionsPage()); return; }
 
-      if (!hasOnboarded) {
-        Get.offAll(() => const OnboardingPage());
-        return;
-      }
+        // All steps done but might not be verified yet.
+        // At this point, if the user exists and is NOT verified -> go VerifyMail.
+        final u = _auth.currentUser;
+        if (u != null && !(u.emailVerified)) {
+          Get.offAll(() => VerifyMail(email: u.email));
+          return;
+        }
 
-      if (!signedUp) {
+        // Fallback
         Get.offAll(() => const SignUpPage());
+      }
+
+      if (user != null) {
+        try { await user.reload(); } catch (_) {}
+        final refreshed = _auth.currentUser;
+
+        if (refreshed != null && refreshed.emailVerified) {
+          // Fully authenticated → home
+          Get.offAll(() => NavigationMenu());
+          return;
+        }
+
+        // NOT verified → continue the step flow instead of VerifyMail
+        await _routeToFirstIncompleteStep();
         return;
       }
 
-      if (!heightDone) {
-        Get.offAll(() => const HeightPage());
-        return;
-      }
-
-      if (!weightDone) {
-        Get.offAll(() => const WeightPage());
-        return;
-      }
-
-      if (!birthDone) {
-        Get.offAll(() => const BirthYearPage());
-        return;
-      }
-
-      // Commented out as per original code
-      // if (!bloodDone) {
-      //   Get.offAll(() => const BloodGroupPage());
-      //   return;
-      // }
-      //
-      // if (!cycleRegularDone) {
-      //   Get.offAll(() => const CycleRegularityPage());
-      //   return;
-      // }
-      //
-      // if (!periodDurationDone) {
-      //   Get.offAll(() => const PeriodDurationPage());
-      //   return;
-      // }
-      //
-      // if (!avgCycleDone) {
-      //   Get.offAll(() => const AverageCycleLengthPage());
-      //   return;
-      // }
-
-      if (!healthDone) {
-        Get.offAll(() => const HealthConditionsPage());
-        return;
-      }
-
-      // If we reach here, all steps are done but user is not authenticated
-      // This shouldn't happen normally, but send to signup as fallback
-      Get.offAll(() => const SignUpPage());
+      // No user signed in → run flow from the top
+      await _routeToFirstIncompleteStep();
 
     } finally {
       _isNavigating = false;
     }
   }
 
-  /// Auth state change handler (called while app is running)
   Future<void> _handleAuthStateChange(User? user) async {
     if (!_initialized) return;
-
-    // Prevent double navigation
     if (_isNavigating) return;
     _isNavigating = true;
 
     try {
       if (user != null) {
-        try {
-          await user.reload();
-        } catch (_) {}
+        try { await user.reload(); } catch (_) {}
         final refreshed = _auth.currentUser;
+
         if (refreshed != null && refreshed.emailVerified) {
           Get.offAll(() => NavigationMenu());
-        } else {
-          Get.offAll(() => VerifyMail(email: refreshed?.email));
+          return;
         }
-      } else {
-        // signed out -> re-run flow (will send to signup or appropriate step)
+
+        // Not verified? Don’t force VerifyMail here—defer to screenRedirect()
         await screenRedirect();
+        return;
       }
+
+      // Signed out → normal flow
+      await screenRedirect();
+
     } finally {
       _isNavigating = false;
     }
   }
+
 
   // Step completion helpers (call from UI)
   void completeConsent() => deviceStorage.write(_consentAcceptedKey, true);

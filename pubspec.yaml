@@ -72,6 +72,7 @@ dependencies:
   audioplayers: ^6.5.1
   flutter_tts: ^4.2.3
   supabase_flutter: ^2.10.1
+  http_parser: ^4.1.2
 
 dev_dependencies:
   flutter_test:

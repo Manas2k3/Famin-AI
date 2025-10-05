@@ -1,5 +1,6 @@
 // lib/views/chat/chat_fullscreen_page.dart
 import 'dart:async';
+import 'dart:convert'; // ✅ for base64 decode (server TTS fallback)
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,13 +11,9 @@ import 'package:just_audio/just_audio.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// ⬇️ We no longer use Firebase Storage for voices
-// import 'package:firebase_storage/firebase_storage.dart';
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../services/chat_services.dart';
-
 
 class ChatFullScreenPage extends StatefulWidget {
   const ChatFullScreenPage({Key? key}) : super(key: key);
@@ -41,7 +38,8 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
 
   // TTS
   final FlutterTts _tts = FlutterTts();
-  bool _speaking = false;
+  String? _speakingMsgId; // which message is currently being spoken
+  late final AudioPlayer _readbackPlayer; // ✅ server TTS fallback player
 
   // Firestore
   final _auth = FirebaseAuth.instance;
@@ -54,13 +52,17 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _msgSub;
   final List<_Msg> _messages = <_Msg>[];
 
+  // NEW: session id for backend (use Firebase uid)
+  String? _sessionId;
+
   @override
   void initState() {
     super.initState();
     _svc = ChatService.fromEnv();
-    // Ensure Supabase session exists (anonymous) BEFORE any storage call
+    _readbackPlayer = AudioPlayer(); // ✅
+    _initTts();
     _ensureSupaAuth().then((_) {
-      _ensureChatAndListen(); // load instantly on entry (Firestore)
+      _ensureChatAndListen();
     });
   }
 
@@ -71,34 +73,129 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     _tts.stop();
     _rec.dispose();
     _msgSub?.cancel();
+    _readbackPlayer.dispose(); // ✅
     super.dispose();
+  }
+
+  // ---------------------- TTS setup & per-message toggle ---------------------
+
+  String _localeFor(String? appLang) {
+    // Map app language codes to device locales FlutterTts understands
+    switch (appLang) {
+      case 'hi': return 'hi-IN';
+      case 'en': return 'en-US';
+      case 'es': return 'es-ES';
+      case 'fr': return 'fr-FR';
+    // Odia + most Indic not well-supported on-device → fallback to server TTS
+      default:   return ''; // empty means "likely unsupported locally"
+    }
+  }
+
+  Future<void> _initTts() async {
+    await _tts.awaitSpeakCompletion(true);
+    await _tts.setSpeechRate(0.45);
+    await _tts.setPitch(1.0);
+    // don't force a specific voice—let platform choose for the locale
+    // final voices = await _tts.getVoices;
+    // debugPrint('TTS voices: $voices');
+
+    _tts.setStartHandler(() {
+      if (!mounted) return;
+      setState(() {}); // trigger icon update
+    });
+    _tts.setCompletionHandler(() {
+      if (!mounted) return;
+      setState(() => _speakingMsgId = null);
+    });
+    _tts.setCancelHandler(() {
+      if (!mounted) return;
+      setState(() => _speakingMsgId = null);
+    });
+    _tts.setErrorHandler((msg) {
+      if (!mounted) return;
+      setState(() => _speakingMsgId = null);
+    });
+  }
+
+  Future<void> _toggleSpeakFor(_Msg m) async {
+    final text = m.text?.trim() ?? '';
+    if (text.isEmpty) return;
+
+    // If tapping the one that's already speaking → stop.
+    if (_speakingMsgId == m.id) {
+      await _tts.stop();
+      await _readbackPlayer.stop();
+      setState(() => _speakingMsgId = null);
+      return;
+    }
+
+    // Always stop anything in progress
+    await _tts.stop();
+    await _readbackPlayer.stop();
+
+    final locale = _localeFor(m.lang);
+    setState(() => _speakingMsgId = m.id);
+
+    if (locale.isNotEmpty) {
+      // Try on-device TTS first
+      try {
+        await _tts.setLanguage(locale);
+        await _tts.speak(text);
+        return; // success → handlers will clear state
+      } catch (_) {
+        // fall through to server TTS
+      }
+    }
+
+    // 🔁 Server-side TTS fallback (great for Odia and less-supported locales)
+    try {
+      final ttsRes = await _svc.tts(text: text, lang: (m.lang ?? 'en'));
+      final b64 = (ttsRes['audio_base64'] ?? '') as String;
+      if (b64.isEmpty) throw Exception('No audio from server TTS');
+      final bytes = base64Decode(b64);
+      // play MP3 bytes
+      await _readbackPlayer.setAudioSource(
+        ByteStreamAudioSource(bytes),
+      );
+      await _readbackPlayer.play();
+      // cleanup when finished
+      _readbackPlayer.playerStateStream.firstWhere((s) => s.processingState == ProcessingState.completed).then((_) {
+        if (!mounted) return;
+        setState(() => _speakingMsgId = null);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _speakingMsgId = null);
+      Get.snackbar('TTS', 'Could not speak message.', snackPosition: SnackPosition.BOTTOM);
+    }
   }
 
   // ---------------------- Supabase auth (anonymous) --------------------------
 
   Future<void> _ensureSupaAuth() async {
-    // v2 API: use the property, not a method
     final session = _supa.auth.currentSession;
     if (session == null) {
-      await _supa.auth.signInAnonymously(); // requires supabase_flutter >= 2.6.0
+      await _supa.auth.signInAnonymously();
     }
   }
-
 
   // -------------------------- Firestore wiring -------------------------------
 
   Future<void> _ensureChatAndListen() async {
     final user = _auth.currentUser;
-    if (user == null) { /* ... */ return; }
+    if (user == null) {
+      Get.snackbar('Auth', 'Please login first.');
+      return;
+    }
 
     final uid = user.uid;
+    _sessionId = uid; // use Firebase UID as backend session
 
-    // 🔽 read pretty name from Users/{uid}.name, fallback to displayName
+    // read pretty name from Users/{uid}.name, fallback to displayName
     final userDoc = await _db.collection('Users').doc(uid).get();
     final usersName = (userDoc.data()?['name'] as String?)?.trim();
-    final displayName = (usersName != null && usersName.isNotEmpty)
-        ? usersName
-        : (user.displayName ?? 'User');
+    final displayName =
+    (usersName != null && usersName.isNotEmpty) ? usersName : (user.displayName ?? 'User');
 
     final chatRef = _db.collection('Chats').doc(uid);
     final snap = await chatRef.get();
@@ -120,7 +217,6 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
 
     _chatRef = chatRef;
 
-    // Listen to messages in order
     _msgSub?.cancel();
     _msgSub = chatRef
         .collection('messages')
@@ -142,12 +238,10 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
           snackPosition: SnackPosition.BOTTOM);
     });
 
-    // If there are no messages, show a warm hello (locally & in Firestore once)
     final firstMsgs =
-    await chatRef.collection('messages').limit(1).get(GetOptions());
+    await chatRef.collection('messages').limit(1).get(const GetOptions());
     if (firstMsgs.docs.isEmpty) {
-      await _addBotMessage(
-          text: "Hi! Ask me anything — text or voice. 💖", lang: null);
+      await _addBotMessage(text: "Hi! Ask me anything — text or voice. 💖", lang: null);
     }
   }
 
@@ -158,7 +252,7 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     final type = data['type'] as String? ?? 'text';
     final text = data['text'] as String?;
     final audioUrl = data['audioUrl'] as String?;
-    final audioPath = data['audioPath'] as String?; // NEW
+    final audioPath = data['audioPath'] as String?;
     final durMs = (data['durationMs'] as num?)?.toInt();
     final transcript = data['transcript'] as String?;
     final lang = data['lang'] as String?;
@@ -208,8 +302,8 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
   }
 
   Future<DocumentReference<Map<String, dynamic>>> _addUserVoice({
-    required String audioUrl,      // signed URL for immediate playback
-    required String audioPath,     // stable Supabase storage path
+    required String audioUrl,
+    required String audioPath,
     required Duration? duration,
   }) async {
     final ref = _chatRef!;
@@ -217,7 +311,7 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
       'sender': 'user',
       'type': 'voice',
       'audioUrl': audioUrl,
-      'audioPath': audioPath,                // NEW
+      'audioPath': audioPath,
       'durationMs': duration?.inMilliseconds,
       'transcript': null,
       'createdAt': FieldValue.serverTimestamp(),
@@ -250,9 +344,6 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
 
   // --------------------- Supabase upload helper ------------------------------
 
-  /// Ensures upload path uses Supabase auth UID so RLS passes:
-  /// (storage.foldername(name))[1] = auth.uid()
-  /// Uploads to `voices/<supaUid>/<ts>.m4a` and returns (path, signedUrl).
   Future<({String path, String signedUrl})> _uploadVoiceToSupabase({
     required File file,
     Duration signedUrlTTL = const Duration(days: 7),
@@ -276,24 +367,40 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
 
   // ------------------------------ UI Actions ---------------------------------
 
+  // TEXT → /message
   Future<void> _sendText() async {
     final raw = _tc.text.trim();
     if (raw.isEmpty || _sending) return;
+    if (_sessionId == null) {
+      Get.snackbar('Session', 'Please wait, initializing…', snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
 
     setState(() {
       _sending = true;
       _botTyping = true;
     });
 
-    // Write user message to Firestore; UI will update from stream
     await _addUserText(raw);
     _tc.clear();
     await _scrollToEnd();
 
-    // Chatbot reply
-    final (reply, detected) = await _svc.chatOnce(raw);
+    try {
+      final res = await _svc.sendMessage(
+        sessionId: _sessionId!,
+        message: raw,
+        speechOut: false,           // we use on-device/server TTS in this widget
+        // replyLang: 'hi',         // optional force
+        // replyStyle: 'hinglish',  // optional
+      );
 
-    await _addBotMessage(text: reply, lang: detected);
+      final reply = (res['reply'] ?? '').toString();
+      final replyLang = (res['reply_lang'] ?? 'en').toString();
+
+      await _addBotMessage(text: reply, lang: replyLang);
+    } catch (e) {
+      await _addBotMessage(text: "Oops—couldn't reach the server. Try again?");
+    }
 
     if (!mounted) return;
     setState(() {
@@ -303,9 +410,9 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     await _scrollToEnd();
   }
 
+  // MIC toggle / Record
   Future<void> _toggleRecord() async {
     if (_isRecording) {
-      // Stop recording
       final path = await _rec.stop();
       _recordPath = path;
       setState(() => _isRecording = false);
@@ -315,7 +422,6 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
       return;
     }
 
-    // Start recording
     final hasPerm = await _rec.hasPermission();
     if (!hasPerm) {
       Get.snackbar(
@@ -327,8 +433,7 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     }
 
     final dir = Directory.systemTemp;
-    final path =
-        '${dir.path}/gibud_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
     await _rec.start(
       const RecordConfig(
@@ -345,15 +450,20 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     });
   }
 
+  // VOICE → /stt → /message
   Future<void> _handleRecordedFile(File file) async {
     if (_sending) return;
+    if (_sessionId == null) {
+      Get.snackbar('Session', 'Please wait, initializing…', snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
 
     setState(() {
       _sending = true;
       _botTyping = true;
     });
 
-    // 1) Get duration quickly
+    // optional: probe duration for UI
     Duration? dur;
     try {
       final probe = AudioPlayer();
@@ -362,44 +472,50 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
       await probe.dispose();
     } catch (_) {}
 
-    // 2) Upload to Supabase Storage (private bucket) using Supabase UID for RLS
+    // keep your storage flow as-is
     final upload = await _uploadVoiceToSupabase(file: file);
-    final audioUrl = upload.signedUrl; // time-limited URL for playback
-    final audioPath = upload.path;     // permanent storage path
+    final audioUrl = upload.signedUrl;
+    final audioPath = upload.path;
 
-    // 3) Create Firestore message (user voice)
     final doc = await _addUserVoice(
       audioUrl: audioUrl,
       audioPath: audioPath,
       duration: dur,
     );
 
-    // 4) Transcribe locally (from file). If empty, add a gentle nudge.
-    final tr = await _svc.transcribeAudio(file);
-    final spokenText = (tr['text'] as String?)?.trim() ?? '';
-    final trLang = tr['lang'] == 'auto' ? null : tr['lang'];
+    try {
+      // If you want Odia transcripts by default, set sttOutLang: 'or'
+      final result = await _svc.chatFromAudio(
+        sessionId: _sessionId!,
+        audioFile: file,
+        speechOut: false,                 // we speak locally (or server fallback) later
+        // sttLang: 'or',                 // optional hint
+        // sttCandidates: ['hi','bn','en'], // optional
+        // sttOutLang: 'or',              // ✅ uncomment to always get Odia transcript
+        // replyLang: 'or',               // optional force bot reply language
+        // replyStyle: 'hinglish',        // optional
+      );
 
-    if (spokenText.isEmpty) {
-      await _addBotMessage(
-          text: "Couldn’t hear that clearly. Try again closer to the mic?");
-      if (!mounted) return;
-      setState(() {
-        _botTyping = false;
-        _sending = false;
-      });
-      await _scrollToEnd();
-      return;
+      // STT payload
+      final stt = (result['stt'] as Map<String, dynamic>?);
+      final spokenText = (stt?['text'] ?? '').toString();
+      final detected = (stt?['text_out_lang'] ?? stt?['detected_lang'] ?? '').toString();
+
+      if (spokenText.isNotEmpty) {
+        await _updateUserVoiceTranscript(messageId: doc.id, transcript: spokenText);
+      } else {
+        await _updateUserVoiceTranscript(messageId: doc.id, transcript: '[unrecognized]');
+      }
+
+      // Chat payload
+      final chat = (result['chat'] as Map<String, dynamic>?);
+      final reply = (chat?['reply'] ?? '').toString();
+      final replyLang = (chat?['reply_lang'] ?? detected).toString();
+
+      await _addBotMessage(text: reply, lang: replyLang);
+    } catch (e) {
+      await _addBotMessage(text: "Couldn’t process that audio. Try again closer to the mic?");
     }
-
-    // 5) Update the voice message with transcript (nice UX)
-    await _updateUserVoiceTranscript(
-        messageId: doc.id, transcript: spokenText);
-
-    // 6) Same pipeline as text → get bot reply, store it
-    final (reply, detected) =
-    await _svc.chatOnce(spokenText, userLangOverride: trLang);
-
-    await _addBotMessage(text: reply, lang: detected);
 
     if (!mounted) return;
     setState(() {
@@ -409,39 +525,20 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     await _scrollToEnd();
   }
 
-  Future<void> _speak(String text, {String? lang}) async {
-    try {
-      await _tts.stop();
-      if (lang != null && lang.isNotEmpty) {
-        await _tts.setLanguage(lang);
-      }
-      setState(() => _speaking = true);
-      await _tts.speak(text);
-    } finally {
-      setState(() => _speaking = false);
-    }
-  }
-
   // -------- Delete (Firestore + Supabase object if voice) --------------------
 
   Future<void> _deleteMessage(_Msg m) async {
-    // Only allow deleting user's own messages (feel free to relax this)
-
     final ref = _chatRef;
     if (ref == null || m.id == null) return;
 
     try {
-      // Delete Firestore doc first so UI updates instantly
       await ref.collection('messages').doc(m.id!).delete();
       await ref.update({'updatedAt': FieldValue.serverTimestamp()});
 
-      // If it's a voice message with a stored path, remove the Supabase object
       if (m.isVoice && (m.audioPath ?? '').isNotEmpty) {
         try {
           await _supa.storage.from('voices').remove([m.audioPath!]);
-        } catch (_) {
-          // ignore storage delete errors to avoid blocking UX
-        }
+        } catch (_) {}
       }
     } catch (e) {
       Get.snackbar('Delete failed', e.toString(),
@@ -450,7 +547,7 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
   }
 
   Future<void> _showMessageMenu(_Msg m) async {
-    final isDeletable = true; // tweak if you want to allow bot deletes too
+    final isDeletable = true;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -593,25 +690,26 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
                   isUser: isUser,
                 )
                     : Column(
-                  crossAxisAlignment: isUser
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
-                    _richMessage(m.text ?? '',
-                        isUser: isUser, lang: m.lang),
+                    _richMessage(m.text ?? '', isUser: isUser, lang: m.lang),
                     if (!isUser) ...[
                       const SizedBox(height: 6),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            tooltip: 'Play voice',
-                            onPressed: _speaking
-                                ? null
-                                : () =>
-                                _speak(m.text ?? '', lang: m.lang),
-                            icon: const Icon(Icons.volume_up_rounded,
-                                size: 20),
+                            tooltip: (m.id == _speakingMsgId)
+                                ? 'Stop voice'
+                                : 'Play voice',
+                            onPressed: () => _toggleSpeakFor(m),
+                            icon: Icon(
+                              (m.id == _speakingMsgId)
+                                  ? Icons.stop_circle_rounded
+                                  : Icons.volume_up_rounded,
+                              size: 20,
+                            ),
                             color: isUser
                                 ? Colors.white
                                 : Colors.pink.shade400,
@@ -625,15 +723,12 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
                 );
 
                 return Align(
-                  alignment: isUser
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
+                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: GestureDetector(
-                    onLongPress: () => _showMessageMenu(m), // 👈 neat menu
+                    onLongPress: () => _showMessageMenu(m),
                     child: Container(
                       constraints: const BoxConstraints(maxWidth: 320),
-                      margin:
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
                       padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
@@ -690,9 +785,9 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
                       child: Theme(
                         data: Theme.of(context).copyWith(
                           textSelectionTheme: const TextSelectionThemeData(
-                            cursorColor: Colors.pink,            // cursor
-                            selectionColor: Color(0xFFFFC1D9),   // highlight background
-                            selectionHandleColor: Colors.pink,   // drag handles
+                            cursorColor: Colors.pink,
+                            selectionColor: Color(0xFFFFC1D9),
+                            selectionHandleColor: Colors.pink,
                           ),
                         ),
                         child: TextFormField(
@@ -720,7 +815,7 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
                     height: 44,
                     child: IconButton(
                       onPressed: _sending ? null : _sendText,
-                      icon: Icon(Icons.send_rounded, color: Colors.pink),
+                      icon: const Icon(Icons.send_rounded, color: Colors.pink),
                     ),
                   ),
                 ],
@@ -832,11 +927,9 @@ class _VoiceBubbleState extends State<_VoiceBubble> {
 
   Future<void> _init() async {
     try {
-      // Try existing signed URL first
       if ((widget.message.audioUrl ?? '').isNotEmpty) {
         await _player.setUrl(widget.message.audioUrl!);
       } else if ((widget.message.audioPath ?? '').isNotEmpty) {
-        // No URL? Create one from path
         final fresh = await Supabase.instance.client.storage
             .from('voices')
             .createSignedUrl(widget.message.audioPath!, const Duration(days: 7).inSeconds);
@@ -844,7 +937,6 @@ class _VoiceBubbleState extends State<_VoiceBubble> {
       }
       _duration = _player.duration ?? widget.message.audioDuration;
     } catch (_) {
-      // If failed/expired, try regenerating from path
       if ((widget.message.audioPath ?? '').isNotEmpty) {
         try {
           final fresh = await Supabase.instance.client.storage
@@ -927,10 +1019,9 @@ class _VoiceBubbleState extends State<_VoiceBubble> {
                       max: (_duration ?? const Duration(milliseconds: 1))
                           .inMilliseconds
                           .toDouble(),
-                      value: _position.inMilliseconds.clamp(
-                        0,
-                        (_duration ?? Duration.zero).inMilliseconds,
-                      ).toDouble(),
+                      value: _position.inMilliseconds
+                          .clamp(0, (_duration ?? Duration.zero).inMilliseconds)
+                          .toDouble(),
                       onChanged: (v) async {
                         final newPos = Duration(milliseconds: v.toInt());
                         await _player.seek(newPos);
@@ -1027,5 +1118,25 @@ class _TypingBubbleState extends State<_TypingBubble>
       ),
     );
     return Align(alignment: Alignment.centerLeft, child: base);
+  }
+}
+
+/// --- just_audio ByteSource to play raw MP3 bytes from server TTS ---
+class ByteStreamAudioSource extends StreamAudioSource {
+  final List<int> _bytes;
+  ByteStreamAudioSource(this._bytes);
+
+  @override
+  Future<StreamAudioResponse> request([int? start, int? end]) async {
+    final s = start ?? 0;
+    final e = end ?? _bytes.length;
+    final sub = _bytes.sublist(s, e);
+    return StreamAudioResponse(
+      sourceLength: _bytes.length,
+      contentLength: sub.length,
+      offset: s,
+      contentType: 'audio/mpeg',
+      stream: Stream.value(List<int>.from(sub)),
+    );
   }
 }
