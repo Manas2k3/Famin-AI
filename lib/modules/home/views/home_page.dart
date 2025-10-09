@@ -254,13 +254,13 @@ class HomePage extends StatelessWidget {
 
       // ==================== CHAT FAB ====================
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-        floatingActionButton: _ChatFab(
-          onTap: () {
-            // ⛳️ NEW: push a separate scaffold instead of bottom sheet
-            Get.to(() => const ChatFullScreenPage(),
-                transition: Transition.rightToLeftWithFade);
-          },
-    ));
+      floatingActionButton: _ChatFab(
+        onTap: () {
+          Get.to(() => const ChatFullScreenPage(),
+              transition: Transition.rightToLeftWithFade);
+        },
+      ),
+    );
   }
 
   // ===================== NEW SECTION: Latest Health Check =====================
@@ -272,7 +272,7 @@ class HomePage extends StatelessWidget {
         title: "You're signed out",
         subtitle: "Sign in to see your latest Health Check here.",
         cta: "Take a Health Check",
-        onTap: () => Get.off(() => HealthSurveyPage()),
+        onTap: () => Get.offAll(() => HealthSurveyPage()),
       );
     }
 
@@ -297,7 +297,7 @@ class HomePage extends StatelessWidget {
             title: "Couldn’t load Health Check",
             subtitle: "Tap to retry or take a new check.",
             cta: "Take a Health Check",
-            onTap: () => Get.off(() => HealthSurveyPage()),
+            onTap: () => Get.offAll(() => HealthSurveyPage()),
           );
         }
         if (!snap.hasData || snap.data!.docs.isEmpty) {
@@ -305,7 +305,7 @@ class HomePage extends StatelessWidget {
             title: "No Health Check yet",
             subtitle: "Answer a few quick questions to get smart insights.",
             cta: "Take a Health Check",
-            onTap: () => Get.off(() => HealthSurveyPage()),
+            onTap: () => Get.offAll(() => HealthSurveyPage()),
           );
         }
 
@@ -326,8 +326,7 @@ class HomePage extends StatelessWidget {
   Map<String, dynamic> _mapOrEmpty(dynamic v) =>
       (v is Map<String, dynamic>) ? v : <String, dynamic>{};
 
-  List<dynamic> _listOrEmpty(dynamic v) =>
-      (v is List) ? v : const [];
+  List<dynamic> _listOrEmpty(dynamic v) => (v is List) ? v : const [];
 
   T? _firstOrNull<T>(List l) => l.isNotEmpty ? (l.first as T?) : null;
 
@@ -354,6 +353,57 @@ class HomePage extends StatelessWidget {
     return <String, dynamic>{};
   }
 
+  /// Try to get the locally computed Thyroid split (thyroid_hypo / thyroid_hyper)
+  Map<String, dynamic> _pickThyroidLocal(Map<String, dynamic> data) {
+    // Preferred: apiResponse.thyroid_local
+    final api = _asMap(data['apiResponse']);
+    final local = _asMap(api['thyroid_local']);
+    if (local.isNotEmpty) return local;
+
+    // Some future/alternate shapes (be liberal):
+    final rootLocal = _asMap(data['thyroid_local']);
+    if (rootLocal.isNotEmpty) return rootLocal;
+
+    final details = _asMap(api['details']);
+    final detailsLocal = _asMap(details['thyroid_local']);
+    if (detailsLocal.isNotEmpty) return detailsLocal;
+
+    return <String, dynamic>{};
+  }
+
+  // ===== NEW: Prefer single unified label from local_indicators =====
+  Map<String, dynamic> _pickLocalIndicators(Map<String, dynamic> data) {
+    final api = _asMap(data['apiResponse']);
+    final li = _asMap(api['local_indicators']);
+    if (li.isNotEmpty) return li;
+
+    final root = _asMap(data['local_indicators']);
+    if (root.isNotEmpty) return root;
+
+    return <String, dynamic>{};
+  }
+
+  String _coalesceThyroidIndicator({
+    required String single,
+    required String hypo,
+    required String hyper,
+    required String legacy,
+  }) {
+    if (single.trim().isNotEmpty) return single.trim();
+
+    bool _isElevated(String s) {
+      final t = s.toLowerCase();
+      return t.contains('moderate') || t.contains('high');
+    }
+    if (_isElevated(hypo) && _isElevated(hyper)) {
+      return 'Ambiguous – Please do TSH/T3/T4 tests';
+    }
+    if (_isElevated(hyper)) return hyper;
+    if (_isElevated(hypo)) return hypo;
+
+    return legacy;
+  }
+
   String _pickIndicator(Map<String, dynamic> block) {
     // tolerate 'indicator' or 'status' or 'label'
     final v = block['indicator'] ?? block['status'] ?? block['label'];
@@ -369,7 +419,6 @@ class HomePage extends StatelessWidget {
 
   bool _dropReason(String s) {
     final t = s.trim();
-    // drop model probability/confidence lines
     if (RegExp(r'^Model\s+high-?risk\s+probability\s*:', caseSensitive: false).hasMatch(t)) {
       return true;
     }
@@ -432,12 +481,31 @@ class HomePage extends StatelessWidget {
     final anemia = _pickBlock(data, 'anemia');
     final pcos = _pickBlock(data, 'pcos');
     final endo = _pickBlock(data, 'endometriosis');
+
+    // Legacy thyroid block (fallback)
     final thyroid = _pickBlock(data, 'thyroid');
+    final thyroidIndLegacy = _pickIndicator(thyroid);
+
+    // NEW: Thyroid split (if present)
+    final thyroidLocal = _pickThyroidLocal(data);
+    final thyroidHypo = _asMap(thyroidLocal['thyroid_hypo']);
+    final thyroidHyper = _asMap(thyroidLocal['thyroid_hyper']);
+    final thyroidHypoInd = _pickIndicator(thyroidHypo);
+    final thyroidHyperInd = _pickIndicator(thyroidHyper);
+
+    // NEW: unified, prefer local_indicators.thyroid
+    final localIndicators = _pickLocalIndicators(data);
+    final thyroidSingle = (localIndicators['thyroid'] ?? '').toString();
+    final thyroidUnified = _coalesceThyroidIndicator(
+      single: thyroidSingle,
+      hypo: thyroidHypoInd,
+      hyper: thyroidHyperInd,
+      legacy: thyroidIndLegacy,
+    );
 
     final anemiaInd = _pickIndicator(anemia);
     final pcosInd = _pickIndicator(pcos);
     final endoInd = _pickIndicator(endo);
-    final thyroidInd = _pickIndicator(thyroid);
 
     List _list(dynamic v) => (v is List) ? v : const [];
 
@@ -445,23 +513,35 @@ class HomePage extends StatelessWidget {
       ..._list(anemia['reasons']).map((e) => e.toString().trim()),
       ..._list(pcos['reasons']).map((e) => e.toString().trim()),
       ..._list(endo['reasons']).map((e) => e.toString().trim()),
+      ..._list(thyroidHypo['reasons']).map((e) => e.toString().trim()),
+      ..._list(thyroidHyper['reasons']).map((e) => e.toString().trim()),
       ..._list(thyroid['reasons']).map((e) => e.toString().trim()),
     }.where((e) => e.isNotEmpty && !_dropReason(e)).toList();
 
     final recommendation = _pickRecommendation(data);
 
-    Widget chip(String text) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.black12.withOpacity(0.08)),
-      ),
-      child: Text(text, style: const TextStyle(fontWeight: FontWeight.w700)),
-    );
+    Widget chip(String text) {
+      final style = _badgeStyleFor(text);
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: style.bg,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.black12.withOpacity(0.08)),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(fontWeight: FontWeight.w800, color: style.fg),
+          softWrap: true,
+        ),
+      );
+    }
 
     Widget sectionTile(String title, String value) {
       if (value.isEmpty) return const SizedBox.shrink();
+
+      final isAmbiguous = value.toLowerCase().contains('ambiguous');
+
       return Container(
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.only(bottom: 10),
@@ -470,11 +550,29 @@ class HomePage extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.black12.withOpacity(0.08)),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-            const Spacer(),
-            chip(value),
+            const SizedBox(height: 6),
+            Align(alignment: Alignment.centerLeft, child: chip(value)),
+            if (isAmbiguous) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFF9C6A00)),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'This result is ambiguous. Please take standard thyroid tests '
+                          '(TSH, Free T3, Free T4) and consult an Endocrinologist.',
+                      style: TextStyle(fontSize: 12.5, color: Colors.black87, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       );
@@ -521,30 +619,11 @@ class HomePage extends StatelessWidget {
                     ]),
                     const SizedBox(height: 12),
 
+                    // Same order as results page:
                     sectionTile('Anemia', anemiaInd),
                     sectionTile('PCOS', pcosInd),
+                    sectionTile('Thyroid', thyroidUnified),
                     sectionTile('Endometriosis', endoInd),
-                    sectionTile('Thyroid', thyroidInd),
-
-                    if (reasons.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text('Reasons',
-                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.black.withOpacity(0.8))),
-                      const SizedBox(height: 8),
-                      ...reasons
-                          .where((e) => e.trim().isNotEmpty)
-                          .map((r) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Padding(padding: EdgeInsets.only(top: 3), child: Icon(Icons.circle, size: 6)),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(r, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
-                          ],
-                        ),
-                      )),
-                    ],
 
                     if (recommendation.trim().isNotEmpty) ...[
                       const SizedBox(height: 10),
@@ -736,13 +815,13 @@ class HomePage extends StatelessWidget {
     switch (cls) {
       case 'Normal':
       case 'Normal Function':
-        return const Color(0xFF47A967);
+        return const Color(0xFF47A967); // green
       case 'Hypo':
       case 'Hypothyroid Risk':
-        return const Color(0xFFE0A800);
+        return const Color(0xFFE0A800); // orange
       case 'Hyper':
       case 'Hyperthyroid Risk':
-        return const Color(0xFFD7263D);
+        return const Color(0xFFD7263D); // red (current)
       default:
         return Colors.grey.shade400;
     }
@@ -782,7 +861,7 @@ class HomePage extends StatelessWidget {
               ],
             ),
           ),
-          TextButton(onPressed: onTap, child: Text(cta, style: TextStyle(color: Colors.pink),)),
+          TextButton(onPressed: onTap, child: Text(cta, style: TextStyle(color: Colors.pink))),
         ],
       ),
     );
@@ -1192,7 +1271,7 @@ class HomePage extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: () {
-          Get.off(() => HealthSurveyPage());
+          Get.offAll(() => HealthSurveyPage());
         },
         child: Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -1481,6 +1560,46 @@ class _RiskChip {
   final double percent;
   final String tag;
   _RiskChip({required this.label, required this.percent, required this.tag});
+}
+
+class _BadgeStyle {
+  final Color bg;
+  final Color fg;
+  const _BadgeStyle(this.bg, this.fg);
+}
+
+/// Maps indicator/status text → chip colors
+_BadgeStyle _badgeStyleFor(String raw) {
+  final s = (raw ?? '').toString().trim().toLowerCase();
+
+  if (s.contains('ambiguous')) {
+    return const _BadgeStyle(Color(0xFFFFF3E0), Color(0xFF9C6A00)); // orange
+  }
+
+  // Generic risk levels
+  if (s.contains('high')) {
+    return const _BadgeStyle(Color(0xFFFFE8EA), Color(0xFFB90F3A)); // red
+  }
+  if (s.contains('moderate') || s.contains('medium') || s.contains('borderline')) {
+    return const _BadgeStyle(Color(0xFFFFF3E0), Color(0xFF9C6A00)); // orange
+  }
+  if (s.contains('low') || s.contains('none') || s.contains('not detected')) {
+    return const _BadgeStyle(Color(0xFFEAF7EE), Color(0xFF1B7F41)); // green
+  }
+
+  // Thyroid-specific labels
+  if (s.contains('normal')) {
+    return const _BadgeStyle(Color(0xFFEAF7EE), Color(0xFF1B7F41)); // green
+  }
+  if (s.contains('hypo')) { // "Hypo" or "Hypothyroid Risk"
+    return const _BadgeStyle(Color(0xFFFFF3E0), Color(0xFF9C6A00)); // orange
+  }
+  if (s.contains('hyper')) { // "Hyper" or "Hyperthyroid Risk"
+    return const _BadgeStyle(Color(0xFFFFE8EA), Color(0xFFB90F3A)); // red
+  }
+
+  // Fallback neutral
+  return _BadgeStyle(Colors.black.withOpacity(0.06), Colors.black87);
 }
 
 // ==================== CHAT UI + SERVICE ====================
