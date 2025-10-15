@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../../data/repositories/authentication/authentication_repository.dart';
+import 'activity_level_page.dart';
 import 'cycleSelectionPage.dart';
 
 class HealthConditionsPage extends StatefulWidget {
@@ -359,7 +360,7 @@ class _HealthConditionsPageState extends State<HealthConditionsPage> {
       // proceed to cycle selection
       await Future.delayed(const Duration(milliseconds: 200));
       if (!mounted) return;
-      Get.to(() => const CycleSelectionPage());
+      Get.to(() => const ActivityLevelPage());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

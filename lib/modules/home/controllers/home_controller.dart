@@ -70,6 +70,7 @@ class PeriodEntry {
 }
 
 class HomeController extends GetxController {
+  final ScrollController calendarScrollCtrl = ScrollController();
   final auth = FirebaseAuth.instance;
   final db = FirebaseFirestore.instance;
 

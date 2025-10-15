@@ -12,18 +12,18 @@ class ProfilePage extends StatelessWidget {
     Key? key,
     this.avatarUrl = 'https://i.pinimg.com/474x/e6/e4/df/e6e4df26ba752161b9fc6a17321fa286.jpg',
     this.userName = 'You',
-    this.version = 'Version 9.85.1',
+    this.version = 'Version 0.0.1',
   }) : super(key: key);
 
   // Settings items shown in the screenshot (you can remove ones not used)
   List<Map<String, dynamic>> get _settings => [
     {'title': 'App settings', 'icon': Icons.settings, 'onTap': () {}},
-    {'title': 'App lock', 'icon': Icons.lock, 'onTap': () {}},
-    {'title': 'Graphs & reports', 'icon': Icons.show_chart, 'onTap': () {}},
+    // {'title': 'App lock', 'icon': Icons.lock, 'onTap': () {}},
+    // {'title': 'Graphs & reports', 'icon': Icons.show_chart, 'onTap': () {}},
     {'title': 'Cycle and ovulation', 'icon': Icons.loop, 'onTap': () {}},
     {'title': 'Reminders', 'icon': Icons.notifications, 'onTap': () {}},
     {'title': 'Privacy settings', 'icon': Icons.privacy_tip, 'onTap': (() => Get.to(PrivacySettings())) },
-    {'title': 'Help', 'icon': Icons.help_outline, 'onTap': () {}},
+    // {'title': 'Help', 'icon': Icons.help_outline, 'onTap': () {}},
 
   ];
 
@@ -103,64 +103,7 @@ class ProfilePage extends StatelessWidget {
 
                   ),
 
-                  SizedBox(height: 16),
-
-                  // Privacy info card (teal shield icon + Learn more)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        // teal shield-ish circle with a check mark to match screenshot
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: Color(0xFF12907A).withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.verified,
-                              color: Color(0xFF12907A),
-                              size: 28,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Your data is protected',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              SizedBox(height: 6),
-                              Text(
-                                "Your privacy is our top priority. We'll never sell your data and you can delete it at anytime.",
-                                style: secondaryText,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              SizedBox(height: 10),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 22),
-
+                  SizedBox(height: 316),
                   // Footer small text (centered)
                   Column(
                     children: [

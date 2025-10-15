@@ -73,6 +73,8 @@ dependencies:
   flutter_tts: ^4.2.3
   supabase_flutter: ^2.10.1
   http_parser: ^4.1.2
+  url_launcher: ^6.3.2
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:

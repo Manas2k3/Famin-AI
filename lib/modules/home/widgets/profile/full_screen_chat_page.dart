@@ -1,19 +1,20 @@
 // lib/views/chat/chat_fullscreen_page.dart
 import 'dart:async';
-import 'dart:convert'; // ✅ for base64 decode (server TTS fallback)
+import 'dart:convert'; // for base64 decode (server TTS fallback)
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:record/record.dart'; // v5+ uses AudioRecorder + RecordConfig
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
-
+import 'package:flutter/gestures.dart'; // for clickable links
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // for .env file
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:url_launcher/url_launcher.dart'; // open external links/maps
 import '../../../../services/chat_services.dart';
+import '../../../../services/location_service.dart'; // Google Places API
 
 class ChatFullScreenPage extends StatefulWidget {
   const ChatFullScreenPage({Key? key}) : super(key: key);
@@ -28,6 +29,8 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
   final ScrollController _sc = ScrollController();
 
   late final ChatService _svc;
+  late final LocationService _locSvc;
+
   bool _sending = false;
   bool _botTyping = false;
 
@@ -38,8 +41,8 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
 
   // TTS
   final FlutterTts _tts = FlutterTts();
-  String? _speakingMsgId; // which message is currently being spoken
-  late final AudioPlayer _readbackPlayer; // ✅ server TTS fallback player
+  String? _speakingMsgId;
+  late final AudioPlayer _readbackPlayer;
 
   // Firestore
   final _auth = FirebaseAuth.instance;
@@ -52,14 +55,26 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _msgSub;
   final List<_Msg> _messages = <_Msg>[];
 
-  // NEW: session id for backend (use Firebase uid)
+  // session id for backend (use Firebase uid)
   String? _sessionId;
 
   @override
   void initState() {
     super.initState();
     _svc = ChatService.fromEnv();
-    _readbackPlayer = AudioPlayer(); // ✅
+
+    // Load Google Maps API key from .env file
+    final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
+
+    if (apiKey.isEmpty) {
+      debugPrint('⚠️ ERROR: GOOGLE_MAPS_API_KEY not found in .env file!');
+      debugPrint('Make sure your .env file contains: GOOGLE_MAPS_API_KEY=your_api_key');
+    } else {
+      debugPrint('✅ Google Maps API key loaded from .env successfully');
+    }
+
+    _locSvc = LocationService(apiKey: apiKey);
+    _readbackPlayer = AudioPlayer();
     _initTts();
     _ensureSupaAuth().then((_) {
       _ensureChatAndListen();
@@ -73,21 +88,270 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     _tts.stop();
     _rec.dispose();
     _msgSub?.cancel();
-    _readbackPlayer.dispose(); // ✅
+    _readbackPlayer.dispose();
     super.dispose();
   }
+
+  // ---------------------- URL open helper ------------------------------------
+
+  Future<void> _openUrl(String url) async {
+    if (url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok) {
+      Get.snackbar('Open link', 'Could not open the link.',
+          snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
+  // ---------------------- Location intent detection --------------------------
+
+  bool _isLocationQuery(String text) {
+    final lower = text.toLowerCase();
+    const locationKeywords = [
+      'doctor',
+      'doctors',
+      'gynecologist',
+      'gynaecologist',
+      'thyroid',
+      'specialist',
+      'near me',
+      'around me',
+      'nearby',
+      'find',
+      'search',
+      'locate',
+      'hospital',
+      'clinic',
+      'md',
+      ' in ', // detect "doctors in X location"
+      ' at ', // detect "doctors at X location"
+      ' around ', // detect "doctors around X location"
+    ];
+    return locationKeywords.any((kw) => lower.contains(kw));
+  }
+
+  String _extractSpecialty(String text) {
+    final lower = text.toLowerCase();
+    if (lower.contains('gynecologist') || lower.contains('gynaecologist')) {
+      return 'gynecologist';
+    }
+    if (lower.contains('thyroid')) return 'thyroid specialist';
+    if (lower.contains('cardiologist')) return 'cardiologist';
+    if (lower.contains('dermatologist')) return 'dermatologist';
+    if (lower.contains('pediatrician')) return 'pediatrician';
+    if (lower.contains('orthopedic')) return 'orthopedic';
+    if (lower.contains('neurologist')) return 'neurologist';
+    if (lower.contains('psychiatrist')) return 'psychiatrist';
+    if (lower.contains('dentist')) return 'dentist';
+    if (lower.contains('hospital')) return 'hospital';
+    return 'doctor';
+  }
+
+  // Updated location search handler
+  Future<void> _handleLocationSearch(String userQuery) async {
+    // Extract custom location from query
+    String? _extractLocation(String text) {
+      final lower = text.toLowerCase();
+
+      // Patterns: "in X", "at X", "around X", "near X"
+      final patterns = [
+        RegExp(r'\bin\s+([a-z\s,]+?)(?:\s+for|\s+find|\s+search|$)', caseSensitive: false),
+        RegExp(r'\bat\s+([a-z\s,]+?)(?:\s+for|\s+find|\s+search|$)', caseSensitive: false),
+        RegExp(r'\baround\s+([a-z\s,]+?)(?:\s+for|\s+find|\s+search|$)', caseSensitive: false),
+        RegExp(r'\bnear\s+([a-z\s,]+?)(?:\s+for|\s+find|\s+search|$)', caseSensitive: false),
+      ];
+
+      for (final pattern in patterns) {
+        final match = pattern.firstMatch(text);
+        if (match != null && match.group(1) != null) {
+          var location = match.group(1)!.trim();
+          // Clean up common noise words
+          location = location.replaceAll(RegExp(r'\s+(area|locality|region)$'), '');
+          if (location.length > 3 && !location.contains('near me')) {
+            return location;
+          }
+        }
+      }
+
+      return null;
+    }
+
+    String? extractGender(String text) {
+      final lower = text.toLowerCase();
+
+      if (lower.contains('female doctor') ||
+          lower.contains('lady doctor') ||
+          lower.contains('women doctor') ||
+          lower.contains('female gynecologist') ||
+          lower.contains('lady gynecologist') ||
+          lower.contains('female specialist') ||
+          lower.contains('woman doctor') ||
+          lower.contains('female cardiologist') ||
+          lower.contains('female dermatologist') ||
+          lower.contains('female pediatrician')) {
+        return 'female';
+      }
+
+      if (lower.contains('male doctor') ||
+          lower.contains('male gynecologist') ||
+          lower.contains('gentleman doctor') ||
+          lower.contains('male specialist') ||
+          lower.contains('male cardiologist') ||
+          lower.contains('male dermatologist') ||
+          lower.contains('male pediatrician')) {
+        return 'male';
+      }
+
+      return null;
+    }
+
+    try {
+      final customLocation = _extractLocation(userQuery);
+      final gender = extractGender(userQuery);
+      final specialty = _extractSpecialty(userQuery);
+
+      double? searchLat;
+      double? searchLon;
+      String locationDescription = 'your location';
+
+      if (customLocation != null && customLocation.isNotEmpty) {
+        // Geocode the custom location
+        await _addBotMessage(
+          text: "🔍 Looking for ${gender != null ? '**$gender** ' : ''}**${specialty}s** in **$customLocation**...",
+          lang: 'en',
+        );
+
+        final coords = await _locSvc.geocodeLocation(customLocation);
+        if (coords == null) {
+          await _addBotMessage(
+            text: "❌ I couldn't find the location '$customLocation'. Please try with a more specific address like 'Patia, Bhubaneswar' or use your current location.",
+            lang: 'en',
+          );
+          return;
+        }
+
+        searchLat = coords.latitude;
+        searchLon = coords.longitude;
+        locationDescription = coords.formattedAddress;
+      } else {
+        // Use current location
+        final ok = await _locSvc.ensureLocationReady();
+        if (!ok) {
+          await _addBotMessage(
+            text: "❌ I couldn't access your location. Please allow location **and** turn on Location Services (GPS). On Xiaomi/MIUI, set permission to **Allow while in use** and enable **Precise**.",
+            lang: 'en',
+          );
+          return;
+        }
+
+        final position = await _locSvc.getCurrentLocation();
+        if (position == null) {
+          await _addBotMessage(
+            text: "❌ Still couldn't read your location. Please try again after enabling Location Services.",
+            lang: 'en',
+          );
+          return;
+        }
+
+        searchLat = position.latitude;
+        searchLon = position.longitude;
+      }
+
+      // Search for doctors
+      final doctors = await _locSvc.searchDoctors(
+        specialty: specialty,
+        latitude: searchLat,
+        longitude: searchLon,
+        radius: 5000,
+        gender: gender,
+      );
+
+      if (doctors.isEmpty) {
+        final genderText = gender != null ? '**$gender** ' : '';
+        await _addBotMessage(
+          text: "😔 I couldn't find any $genderText**${specialty}s** near **$locationDescription**. Try widening your search area or removing the gender filter.",
+          lang: 'en',
+        );
+        return;
+      }
+
+      // Add disclaimer for gender filtering
+      final genderText = gender != null ? ' (**$gender**)' : '';
+      final genderNote = gender != null
+          ? '\n\n_ℹ️ Note: Gender filtering is based on name patterns (Dr. Mrs, Dr. Mr, common names) and may not be 100% accurate. Results without clear gender indicators are included but placed lower in the list._\n'
+          : '';
+
+      final buffer = StringBuffer(
+          "✅ Found **${doctors.length} ${specialty}s$genderText** near **$locationDescription**:$genderNote\n"
+      );
+      final doctorData = <Map<String, dynamic>>[];
+
+      for (int i = 0; i < doctors.length; i++) {
+        final d = doctors[i];
+        final ratingStr = d.rating != null
+            ? '⭐ ${d.rating!.toStringAsFixed(1)} (${d.userRatingsTotal ?? 0} reviews)'
+            : '⭐ No reviews yet';
+
+        buffer.writeln("**${i + 1}. ${d.name}**");
+
+        // Add gender indicator if detected
+        if (d.detectedGender != null) {
+          final genderEmoji = d.detectedGender == 'female' ? '👩‍⚕️' : '👨‍⚕️';
+          buffer.writeln("   $genderEmoji ${d.detectedGender == 'female' ? 'Female' : 'Male'} Doctor");
+        }
+
+        if (d.address.trim().isNotEmpty) {
+          buffer.writeln("   📍 ${d.address}");
+        }
+
+        buffer.writeln("   $ratingStr");
+
+        if (!d.isOpen) {
+          buffer.writeln("   ⚠️ **Currently closed**");
+        }
+
+        final mapsUrl = LocationService.getGoogleMapsUrl(d);
+        buffer.writeln("   [📱 Open in Google Maps]($mapsUrl)\n");
+
+        doctorData.add(d.toJson());
+      }
+
+      await _addBotMessage(
+        text: buffer.toString(),
+        lang: 'en',
+        metadata: {
+          'doctors': doctorData,
+          'search_location': locationDescription,
+          'gender_filter': gender,
+          'specialty': specialty,
+        },
+      );
+    } catch (e) {
+      debugPrint('Location search error: $e');
+      await _addBotMessage(
+        text: "❌ Sorry, I had trouble searching for doctors. Please try again or check your internet connection.",
+        lang: 'en',
+      );
+    }
+  }
+
 
   // ---------------------- TTS setup & per-message toggle ---------------------
 
   String _localeFor(String? appLang) {
-    // Map app language codes to device locales FlutterTts understands
     switch (appLang) {
-      case 'hi': return 'hi-IN';
-      case 'en': return 'en-US';
-      case 'es': return 'es-ES';
-      case 'fr': return 'fr-FR';
-    // Odia + most Indic not well-supported on-device → fallback to server TTS
-      default:   return ''; // empty means "likely unsupported locally"
+      case 'hi':
+        return 'hi-IN';
+      case 'en':
+        return 'en-US';
+      case 'es':
+        return 'es-ES';
+      case 'fr':
+        return 'fr-FR';
+      default:
+        return ''; // unsupported → use server TTS
     }
   }
 
@@ -95,13 +359,10 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     await _tts.awaitSpeakCompletion(true);
     await _tts.setSpeechRate(0.45);
     await _tts.setPitch(1.0);
-    // don't force a specific voice—let platform choose for the locale
-    // final voices = await _tts.getVoices;
-    // debugPrint('TTS voices: $voices');
 
     _tts.setStartHandler(() {
       if (!mounted) return;
-      setState(() {}); // trigger icon update
+      setState(() {});
     });
     _tts.setCompletionHandler(() {
       if (!mounted) return;
@@ -111,7 +372,7 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
       if (!mounted) return;
       setState(() => _speakingMsgId = null);
     });
-    _tts.setErrorHandler((msg) {
+    _tts.setErrorHandler((_) {
       if (!mounted) return;
       setState(() => _speakingMsgId = null);
     });
@@ -121,7 +382,6 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     final text = m.text?.trim() ?? '';
     if (text.isEmpty) return;
 
-    // If tapping the one that's already speaking → stop.
     if (_speakingMsgId == m.id) {
       await _tts.stop();
       await _readbackPlayer.stop();
@@ -129,7 +389,6 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
       return;
     }
 
-    // Always stop anything in progress
     await _tts.stop();
     await _readbackPlayer.stop();
 
@@ -137,36 +396,33 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     setState(() => _speakingMsgId = m.id);
 
     if (locale.isNotEmpty) {
-      // Try on-device TTS first
       try {
         await _tts.setLanguage(locale);
         await _tts.speak(text);
-        return; // success → handlers will clear state
+        return;
       } catch (_) {
         // fall through to server TTS
       }
     }
 
-    // 🔁 Server-side TTS fallback (great for Odia and less-supported locales)
     try {
       final ttsRes = await _svc.tts(text: text, lang: (m.lang ?? 'en'));
       final b64 = (ttsRes['audio_base64'] ?? '') as String;
       if (b64.isEmpty) throw Exception('No audio from server TTS');
       final bytes = base64Decode(b64);
-      // play MP3 bytes
-      await _readbackPlayer.setAudioSource(
-        ByteStreamAudioSource(bytes),
-      );
+      await _readbackPlayer.setAudioSource(ByteStreamAudioSource(bytes));
       await _readbackPlayer.play();
-      // cleanup when finished
-      _readbackPlayer.playerStateStream.firstWhere((s) => s.processingState == ProcessingState.completed).then((_) {
+      _readbackPlayer.playerStateStream
+          .firstWhere((s) => s.processingState == ProcessingState.completed)
+          .then((_) {
         if (!mounted) return;
         setState(() => _speakingMsgId = null);
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() => _speakingMsgId = null);
-      Get.snackbar('TTS', 'Could not speak message.', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('TTS', 'Could not speak message.',
+          snackPosition: SnackPosition.BOTTOM);
     }
   }
 
@@ -241,7 +497,8 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     final firstMsgs =
     await chatRef.collection('messages').limit(1).get(const GetOptions());
     if (firstMsgs.docs.isEmpty) {
-      await _addBotMessage(text: "Hi! Ask me anything — text or voice. 💖", lang: null);
+      await _addBotMessage(
+          text: "Hi! Ask me anything — text or voice. 💖", lang: null);
     }
   }
 
@@ -330,13 +587,18 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     });
   }
 
-  Future<void> _addBotMessage({required String text, String? lang}) async {
+  Future<void> _addBotMessage({
+    required String text,
+    String? lang,
+    Map<String, dynamic>? metadata, // store doctor list if present
+  }) async {
     final ref = _chatRef!;
     await ref.collection('messages').add({
       'sender': 'bot',
       'type': 'text',
       'text': text,
       'lang': lang,
+      if (metadata != null) 'metadata': metadata,
       'createdAt': FieldValue.serverTimestamp(),
     });
     await ref.update({'updatedAt': FieldValue.serverTimestamp()});
@@ -367,12 +629,13 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
 
   // ------------------------------ UI Actions ---------------------------------
 
-  // TEXT → /message
+  // TEXT → (doctor search if intent) else → /message
   Future<void> _sendText() async {
     final raw = _tc.text.trim();
     if (raw.isEmpty || _sending) return;
     if (_sessionId == null) {
-      Get.snackbar('Session', 'Please wait, initializing…', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Session', 'Please wait, initializing…',
+          snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
@@ -386,18 +649,20 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     await _scrollToEnd();
 
     try {
-      final res = await _svc.sendMessage(
-        sessionId: _sessionId!,
-        message: raw,
-        speechOut: false,           // we use on-device/server TTS in this widget
-        // replyLang: 'hi',         // optional force
-        // replyStyle: 'hinglish',  // optional
-      );
+      if (_isLocationQuery(raw)) {
+        await _handleLocationSearch(raw);
+      } else {
+        final res = await _svc.sendMessage(
+          sessionId: _sessionId!,
+          message: raw,
+          speechOut: false, // we use on-device/server TTS in this widget
+        );
 
-      final reply = (res['reply'] ?? '').toString();
-      final replyLang = (res['reply_lang'] ?? 'en').toString();
+        final reply = (res['reply'] ?? '').toString();
+        final replyLang = (res['reply_lang'] ?? 'en').toString();
 
-      await _addBotMessage(text: reply, lang: replyLang);
+        await _addBotMessage(text: reply, lang: replyLang);
+      }
     } catch (e) {
       await _addBotMessage(text: "Oops—couldn't reach the server. Try again?");
     }
@@ -450,11 +715,12 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     });
   }
 
-  // VOICE → /stt → /message
+  // VOICE → /stt → (doctor search if intent) else → /message
   Future<void> _handleRecordedFile(File file) async {
     if (_sending) return;
     if (_sessionId == null) {
-      Get.snackbar('Session', 'Please wait, initializing…', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Session', 'Please wait, initializing…',
+          snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
@@ -484,37 +750,40 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     );
 
     try {
-      // If you want Odia transcripts by default, set sttOutLang: 'or'
       final result = await _svc.chatFromAudio(
         sessionId: _sessionId!,
         audioFile: file,
-        speechOut: false,                 // we speak locally (or server fallback) later
-        // sttLang: 'or',                 // optional hint
-        // sttCandidates: ['hi','bn','en'], // optional
-        // sttOutLang: 'or',              // ✅ uncomment to always get Odia transcript
-        // replyLang: 'or',               // optional force bot reply language
-        // replyStyle: 'hinglish',        // optional
+        speechOut: false,
       );
 
       // STT payload
       final stt = (result['stt'] as Map<String, dynamic>?);
       final spokenText = (stt?['text'] ?? '').toString();
-      final detected = (stt?['text_out_lang'] ?? stt?['detected_lang'] ?? '').toString();
+      final detected =
+      (stt?['text_out_lang'] ?? stt?['detected_lang'] ?? '').toString();
 
       if (spokenText.isNotEmpty) {
-        await _updateUserVoiceTranscript(messageId: doc.id, transcript: spokenText);
+        await _updateUserVoiceTranscript(
+            messageId: doc.id, transcript: spokenText);
+
+        if (_isLocationQuery(spokenText)) {
+          await _handleLocationSearch(spokenText);
+        } else {
+          // Chat payload
+          final chat = (result['chat'] as Map<String, dynamic>?);
+          final reply = (chat?['reply'] ?? '').toString();
+          final replyLang = (chat?['reply_lang'] ?? detected).toString();
+          await _addBotMessage(text: reply, lang: replyLang);
+        }
       } else {
-        await _updateUserVoiceTranscript(messageId: doc.id, transcript: '[unrecognized]');
+        await _updateUserVoiceTranscript(
+            messageId: doc.id, transcript: '[unrecognized]');
+        await _addBotMessage(
+            text: "Couldn't understand that. Try again closer to the mic?");
       }
-
-      // Chat payload
-      final chat = (result['chat'] as Map<String, dynamic>?);
-      final reply = (chat?['reply'] ?? '').toString();
-      final replyLang = (chat?['reply_lang'] ?? detected).toString();
-
-      await _addBotMessage(text: reply, lang: replyLang);
     } catch (e) {
-      await _addBotMessage(text: "Couldn’t process that audio. Try again closer to the mic?");
+      await _addBotMessage(
+          text: "Couldn't process that audio. Try again closer to the mic?");
     }
 
     if (!mounted) return;
@@ -561,7 +830,8 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
             children: [
               const SizedBox(height: 8),
               Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                   color: Colors.black12,
                   borderRadius: BorderRadius.circular(100),
@@ -597,47 +867,73 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
     return input.replaceAllMapped(bulletRe, (m) => '• ');
   }
 
-  List<InlineSpan> _spansWithBold(String input, TextStyle base) {
+  // Parse **bold**, *italic*, and [text](url)
+  List<InlineSpan> _spansWithMarkdown(String input, TextStyle base) {
     final text = _normalizeBullets(input);
-
     final spans = <InlineSpan>[];
-    String remaining = text;
 
-    void addPlain(String s) {
-      if (s.isEmpty) return;
-      spans.add(TextSpan(text: s, style: base));
+    // First split by links so we can attach recognizers
+    final linkRe = RegExp(r'\[([^\]]+)\]\(([^)]+)\)');
+    int idx = 0;
+
+    void addBoldItalic(String chunk) {
+      if (chunk.isEmpty) return;
+      // handle newlines
+      final lines = chunk.split('\n');
+      for (int li = 0; li < lines.length; li++) {
+        final line = lines[li];
+        final bi = RegExp(r'(\*\*([^\*]+)\*\*|\*([^\*]+)\*)');
+        int j = 0;
+        for (final m in bi.allMatches(line)) {
+          if (m.start > j) {
+            spans.add(TextSpan(text: line.substring(j, m.start), style: base));
+          }
+          final bold = m.group(2);
+          final italic = m.group(3);
+          if (bold != null) {
+            spans.add(TextSpan(
+                text: bold,
+                style: base.merge(const TextStyle(fontWeight: FontWeight.w800))));
+          } else if (italic != null) {
+            spans.add(TextSpan(
+                text: italic,
+                style: base.merge(const TextStyle(fontStyle: FontStyle.italic))));
+          }
+          j = m.end;
+        }
+        if (j < line.length) {
+          spans.add(TextSpan(text: line.substring(j), style: base));
+        }
+        if (li != lines.length - 1) spans.add(const TextSpan(text: '\n'));
+      }
     }
 
-    final strongRe = RegExp(r'\*\*(.+?)\*\*', dotAll: true);
-    int idx = 0;
-    for (final m in strongRe.allMatches(text)) {
-      if (m.start > idx) addPlain(text.substring(idx, m.start));
-      final boldContent = m.group(1) ?? '';
+    for (final m in linkRe.allMatches(text)) {
+      // pre-link text
+      if (m.start > idx) {
+        addBoldItalic(text.substring(idx, m.start));
+      }
+
+      final label = m.group(1) ?? '';
+      final url = m.group(2) ?? '';
       spans.add(TextSpan(
-        text: boldContent,
-        style: base.merge(const TextStyle(fontWeight: FontWeight.w800)),
+        text: label,
+        style: base.merge(const TextStyle(
+          color: Colors.blue,
+          decoration: TextDecoration.underline,
+        )),
+        recognizer: (TapGestureRecognizer()
+          ..onTap = () {
+            _openUrl(url);
+          }),
       ));
+
       idx = m.end;
     }
-    if (idx < text.length) {
-      remaining = text.substring(idx);
-    } else {
-      remaining = '';
-    }
 
-    final emRe = RegExp(r'\*(?!\s)(.+?)(?<!\s)\*', dotAll: true);
-    int idx2 = 0;
-    for (final m in emRe.allMatches(remaining)) {
-      if (m.start > idx2) addPlain(remaining.substring(idx2, m.start));
-      final boldContent = m.group(1) ?? '';
-      spans.add(TextSpan(
-        text: boldContent,
-        style: base.merge(const TextStyle(fontWeight: FontWeight.w800)),
-      ));
-      idx2 = m.end;
-    }
-    if (idx2 < remaining.length) {
-      addPlain(remaining.substring(idx2));
+    // tail
+    if (idx < text.length) {
+      addBoldItalic(text.substring(idx));
     }
 
     return spans;
@@ -649,8 +945,8 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
       fontWeight: FontWeight.w600,
       height: 1.25,
     );
-    return RichText(
-      text: TextSpan(children: _spansWithBold(text, style)),
+    return SelectableText.rich(
+      TextSpan(children: _spansWithMarkdown(text, style)),
     );
   }
 
@@ -690,8 +986,9 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
                   isUser: isUser,
                 )
                     : Column(
-                  crossAxisAlignment:
-                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  crossAxisAlignment: isUser
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
                   children: [
                     _richMessage(m.text ?? '', isUser: isUser, lang: m.lang),
                     if (!isUser) ...[
@@ -723,14 +1020,16 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
                 );
 
                 return Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment:
+                  isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: GestureDetector(
                     onLongPress: () => _showMessageMenu(m),
                     child: Container(
                       constraints: const BoxConstraints(maxWidth: 320),
-                      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-                      padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      margin:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
                         color: isUser ? pinkDeep : pinkLight,
                         borderRadius: BorderRadius.only(
@@ -831,7 +1130,7 @@ class _ChatFullScreenPageState extends State<ChatFullScreenPage>
 // ----------------------------- MODELS ---------------------------------------
 
 class _Msg {
-  final String? id;           // Firestore doc ID (for delete)
+  final String? id; // Firestore doc ID (for delete)
   final bool isUser;
   final DateTime? createdAt;
 
@@ -840,8 +1139,8 @@ class _Msg {
   final String? lang;
 
   // voice
-  final String? audioUrl;       // signed URL (may expire)
-  final String? audioPath;      // stable storage path in Supabase
+  final String? audioUrl; // signed URL (may expire)
+  final String? audioPath; // stable storage path in Supabase
   final Duration? audioDuration;
   final String? transcript;
 
@@ -932,7 +1231,8 @@ class _VoiceBubbleState extends State<_VoiceBubble> {
       } else if ((widget.message.audioPath ?? '').isNotEmpty) {
         final fresh = await Supabase.instance.client.storage
             .from('voices')
-            .createSignedUrl(widget.message.audioPath!, const Duration(days: 7).inSeconds);
+            .createSignedUrl(
+            widget.message.audioPath!, const Duration(days: 7).inSeconds);
         await _player.setUrl(fresh);
       }
       _duration = _player.duration ?? widget.message.audioDuration;
@@ -941,7 +1241,8 @@ class _VoiceBubbleState extends State<_VoiceBubble> {
         try {
           final fresh = await Supabase.instance.client.storage
               .from('voices')
-              .createSignedUrl(widget.message.audioPath!, const Duration(days: 7).inSeconds);
+              .createSignedUrl(
+              widget.message.audioPath!, const Duration(days: 7).inSeconds);
           await _player.setUrl(fresh);
           _duration = _player.duration ?? widget.message.audioDuration;
         } catch (_) {}
@@ -1077,8 +1378,8 @@ class _TypingBubbleState extends State<_TypingBubble>
   @override
   void initState() {
     super.initState();
-    _ac = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900))
+    _ac =
+    AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
       ..repeat();
   }
 

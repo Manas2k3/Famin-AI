@@ -462,10 +462,21 @@ class HealthCheckController extends GetxController {
 
     // ---------------- Endometriosis ----------------
     int endoCount = 0;
-    final pelvicPainFreq = _lvlOccasion(cramps.value) > 0; // Occ/Frq equivalent (Mild=0; Mod/Sev=2→count as present)
-    if (pelvicPainFreq || _lvlPain(cramps.value) >= 1) endoCount += 1; // count if any pain reported
-    if (interCoursePain.value == 'Occasionally' || interCoursePain.value == 'Frequently' || intercoursePainYes.value) endoCount += 1;
+
+// 1. Pelvic pain during periods (cramps)
+    if (_lvlPain(cramps.value) >= 1) endoCount += 1; // Any pain level (Mild/Moderate/Severe)
+
+// 2. Intercourse pain
+    if (interCoursePain.value == 'Occasionally' ||
+        interCoursePain.value == 'Frequently' ||
+        intercoursePainYes.value) {
+      endoCount += 1;
+    }
+
+// 3. Bowel movement pain
     if (_lvlOccasion(dyspareuniaBowelPain.value) > 0) endoCount += 1;
+
+// 4. Period bloating
     if (_lvl3(periodBloating.value) > 0) endoCount += 1;
 
     String endoLabel;
@@ -496,6 +507,9 @@ class HealthCheckController extends GetxController {
     return reasons;
   }
 
+  // Replace the submitAndGetResults() method in HealthCheckController
+// Starting around line 320 in health_check_module.dart
+
   Future<HealthCheckResult> submitAndGetResults() async {
     final payload = buildPayload();
     final localIndicators = _computeLocalIndicators();
@@ -505,18 +519,22 @@ class HealthCheckController extends GetxController {
     final rawDetails = (apiRes['details'] as Map<String, dynamic>? ?? {});
     final conditions = <ConditionResult>[];
 
-    // Add models with API reasons but override indicators with local labels
+    // FIXED: Always prioritize local indicators, never fall back to API indicators
+    // Add models with API reasons but ALWAYS use local labels
     for (final key in ['anemia', 'pcos', 'endometriosis']) {
       final d = rawDetails[key] as Map<String, dynamic>?;
       final apiReasons = _sanitizeReasons(((d?['reasons'] as List?)?.cast<String>()) ?? []);
-      final indicator = localIndicators[key] ?? (d?['indicator'] as String? ?? 'Low');
+
+      // CRITICAL FIX: Use local indicator directly, no fallback to API
+      final indicator = localIndicators[key] ?? 'Low';
+
       final pct = (d?['high_risk_percentage'] is num) ? (d!['high_risk_percentage'] as num).toDouble() : null;
 
       conditions.add(
         ConditionResult(
           name: key,
           indicator: indicator,
-          reasons: apiReasons,
+          reasons: apiReasons.isEmpty ? ['No specific indicators detected'] : apiReasons,
           percentage: pct,
         ),
       );
@@ -529,7 +547,7 @@ class HealthCheckController extends GetxController {
       ConditionResult(
         name: 'Thyroid',
         indicator: thyroidIndicator,
-        reasons: thyroidReasons.take(4).toList(),
+        reasons: thyroidReasons.isEmpty ? ['No thyroid indicators detected'] : thyroidReasons.take(4).toList(),
         percentage: null,
       ),
     );
@@ -541,7 +559,8 @@ class HealthCheckController extends GetxController {
       final sanitized = <String, dynamic>{
         ...vv,
         'reasons': _sanitizeReasons(((vv['reasons'] as List?)?.cast<String>()) ?? []),
-        if (localIndicators[k] != null) 'indicator': localIndicators[k],
+        // FIXED: Always override with local indicators
+        'indicator': localIndicators[k] ?? vv['indicator'],
       };
       detailsForGemini[k] = sanitized;
     });
@@ -579,6 +598,8 @@ class HealthCheckController extends GetxController {
     );
   }
 
+
+
   Future<void> _saveToFirestore(Map<String, dynamic> apiRes, String recommendation) async {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
     final col = FirebaseFirestore.instance.collection('Health Check');
@@ -597,21 +618,32 @@ class HealthCheckController extends GetxController {
 // ===============================
 List<String> formatRecommendation(String raw) {
   if (raw.isEmpty) return [];
+
   final lines = raw
       .split('\n')
       .map((l) => l.trim())
       .where((l) => l.isNotEmpty)
-      .map((l) => l.startsWith('*') ? l.replaceFirst(RegExp(r'^\*\s*'), '') : l)
       .toList();
 
   final boldRegex = RegExp(r'\*\*([^*]+)\*\*');
   final result = <String>[];
 
   for (var line in lines) {
-    final match = boldRegex.firstMatch(line);
+    // Skip intro/filler lines like "Okay, I understand..." or lines without bullets/bold
+    if (line.toLowerCase().contains('okay') ||
+        line.toLowerCase().contains('here\'s a response') ||
+        line.toLowerCase().contains('based on your indicators') ||
+        (!line.startsWith('*') && !line.startsWith('•') && !boldRegex.hasMatch(line))) {
+      continue;
+    }
+
+    // Remove bullet markers (* or •)
+    var cleanLine = line.replaceFirst(RegExp(r'^[\*•]\s*'), '');
+
+    final match = boldRegex.firstMatch(cleanLine);
     if (match != null) {
       final heading = match.group(1)!.trim();
-      final rest = line.replaceFirst(match.group(0)!, '').trim();
+      final rest = cleanLine.replaceFirst(match.group(0)!, '').trim();
       if (rest.isEmpty) {
         result.add(heading);
       } else {
@@ -619,7 +651,7 @@ List<String> formatRecommendation(String raw) {
         result.add('$heading — $cleanedRest');
       }
     } else {
-      result.add(line);
+      result.add(cleanLine);
     }
   }
   return result;
@@ -792,7 +824,7 @@ class HealthSurveyPage extends StatelessWidget {
           _boolRow('Do you have acne or skin darkening?', c.acneSkinYes),
           _boolRow('Have you experienced recent weight gain?', c.weightGainYes),
           _boolRow('Do you often crave sugar?', c.sugarCravingsYes),
-          _boolRow('Do you find it difficult to lose weight?', c.weightLossDifficultyYes),
+          // _boolRow('Do you find it difficult to lose weight?', c.weightLossDifficultyYes),
           _boolRow('Do you feel hungry even after a meal?', c.hungerAfterEatingYes),
 
           // ——— Anemia Model ———
@@ -819,7 +851,7 @@ class HealthSurveyPage extends StatelessWidget {
             }
             return const SizedBox.shrink();
           }),
-          _chipRow('How often do you feel fatigued, dizzy, or weak?', ['Never', 'Sometimes', 'Often'], c.fatigueDizzyWeak),
+          // _chipRow('How often do you feel fatigued, dizzy, or weak?', ['Never', 'Sometimes', 'Often'], c.fatigueDizzyWeak),
           _chipRow('How often do you experience pelvic pain during periods?', ['Never', 'Mild', 'Moderate', 'Severe'], c.cramps),
           _chipRow('Do you experience pain during bowel movements?', ['Never', 'Occasionally', 'Frequently'], c.dyspareuniaBowelPain),
           _chipRow('How often do you feel bloating or discomfort around your period?', ['Never', 'Sometimes', 'Often'], c.periodBloating),
@@ -929,7 +961,7 @@ class HealthResultPage extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ===== condition cards =====
-          for (final c in result.conditions)
+          for (final c in result.conditions) ...[
             Card(
               color: Colors.grey.shade50,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1023,10 +1055,11 @@ class HealthResultPage extends StatelessWidget {
               ),
             ),
 
-          // ===== thyroid disclaimer (only if thyroid card exists) =====
-          if (hasThyroid) ...[
-            const SizedBox(height: 6),
-            _thyroidDisclaimerCard(),
+            // ===== thyroid disclaimer (appears right after Thyroid card) =====
+            if (c.name.toLowerCase().contains('thyroid')) ...[
+              const SizedBox(height: 6),
+              _thyroidDisclaimerCard(),
+            ],
           ],
 
           // ===== Personalized suggestions =====

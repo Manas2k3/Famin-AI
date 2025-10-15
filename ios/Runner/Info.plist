@@ -15,6 +15,8 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Famina</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+    <string>We use your location to find nearby doctors.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>We use the microphone to record your voice for chat.</string>
 	<key>CFBundleExecutable</key>
