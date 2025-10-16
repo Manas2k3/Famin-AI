@@ -1,0 +1,1512 @@
+{
+  "idli": {
+    "nutrition_per_100g": { "calories": 130, "protein": 4, "fat": 1, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of idli" }],
+    "default_serving": "100g"
+  },
+  "dosa": {
+    "nutrition_per_100g": { "calories": 168, "protein": 4, "fat": 6, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of dosa" }],
+    "default_serving": "100g"
+  },
+  "upma": {
+    "nutrition_per_100g": { "calories": 192, "protein": 4, "fat": 8, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of upma" }],
+    "default_serving": "100g"
+  },
+  "poha": {
+    "nutrition_per_100g": { "calories": 180, "protein": 3, "fat": 6, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of poha" }],
+    "default_serving": "100g"
+  },
+  "puttu": {
+    "nutrition_per_100g": { "calories": 150, "protein": 3, "fat": 1, "carbs": 32 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of puttu" }],
+    "default_serving": "100g"
+  },
+  "ven pongal": {
+    "nutrition_per_100g": { "calories": 150, "protein": 5, "fat": 5, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of ven pongal" }],
+    "default_serving": "100g"
+  },
+  "paratha": {
+    "nutrition_per_100g": { "calories": 260, "protein": 7, "fat": 10, "carbs": 35 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of paratha" }],
+    "default_serving": "100g"
+  },
+  "aloo paratha": {
+    "nutrition_per_100g": { "calories": 177, "protein": 4, "fat": 6, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of aloo paratha" }],
+    "default_serving": "100g"
+  },
+  "gobi paratha": {
+    "nutrition_per_100g": { "calories": 160, "protein": 4, "fat": 5, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of gobi paratha" }],
+    "default_serving": "100g"
+  },
+  "methi paratha": {
+    "nutrition_per_100g": { "calories": 170, "protein": 5, "fat": 6, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of methi paratha" }],
+    "default_serving": "100g"
+  },
+  "paneer paratha": {
+    "nutrition_per_100g": { "calories": 250, "protein": 10, "fat": 12, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of paneer paratha" }],
+    "default_serving": "100g"
+  },
+  "puri bhaji": {
+    "nutrition_per_100g": { "calories": 250, "protein": 5, "fat": 12, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of puri bhaji" }],
+    "default_serving": "100g"
+  },
+  "chole bhature": {
+    "nutrition_per_100g": { "calories": 280, "protein": 8, "fat": 12, "carbs": 35 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chole bhature" }],
+    "default_serving": "100g"
+  },
+  "poori masala": {
+    "nutrition_per_100g": { "calories": 250, "protein": 5, "fat": 12, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of poori masala" }],
+    "default_serving": "100g"
+  },
+  "kanda poha": {
+    "nutrition_per_100g": { "calories": 180, "protein": 3, "fat": 6, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of kanda poha" }],
+    "default_serving": "100g"
+  },
+  "misal pav": {
+    "nutrition_per_100g": { "calories": 250, "protein": 10, "fat": 10, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of misal pav" }],
+    "default_serving": "100g"
+  },
+  "vada pav": {
+    "nutrition_per_100g": { "calories": 290, "protein": 8, "fat": 12, "carbs": 40 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of vada pav" }],
+    "default_serving": "100g"
+  },
+  "moong dal chilla": {
+    "nutrition_per_100g": { "calories": 150, "protein": 8, "fat": 5, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of moong dal chilla" }],
+    "default_serving": "100g"
+  },
+  "besan chilla": {
+    "nutrition_per_100g": { "calories": 160, "protein": 7, "fat": 6, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of besan chilla" }],
+    "default_serving": "100g"
+  },
+  "veg sandwich": {
+    "nutrition_per_100g": { "calories": 180, "protein": 6, "fat": 5, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veg sandwich" }],
+    "default_serving": "100g"
+  },
+  "bread butter": {
+    "nutrition_per_100g": { "calories": 320, "protein": 8, "fat": 15, "carbs": 38 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bread butter" }],
+    "default_serving": "100g"
+  },
+  "toast": {
+    "nutrition_per_100g": { "calories": 280, "protein": 10, "fat": 4, "carbs": 50 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of toast" }],
+    "default_serving": "100g"
+  },
+  "omelette": {
+    "nutrition_per_100g": { "calories": 154, "protein": 13, "fat": 11, "carbs": 1 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of omelette" }],
+    "default_serving": "100g"
+  },
+  "boiled egg": {
+    "nutrition_per_100g": { "calories": 155, "protein": 13, "fat": 11, "carbs": 1 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of boiled egg" }],
+    "default_serving": "100g"
+  },
+  "tea": {
+    "nutrition_per_100g": { "calories": 14, "protein": 1, "fat": 0.5, "carbs": 2 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup tea (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml tea" }],
+    "default_serving": "cup"
+  },
+  "coffee": {
+    "nutrition_per_100g": { "calories": 2, "protein": 0.1, "fat": 0, "carbs": 0.3 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup coffee (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml coffee" }],
+    "default_serving": "cup"
+  },
+  "milk": {
+    "nutrition_per_100g": { "calories": 60, "protein": 3.3, "fat": 3.2, "carbs": 4.8 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup milk (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml milk" }],
+    "default_serving": "cup"
+  },
+  "oats": {
+    "nutrition_per_100g": { "calories": 71, "protein": 2.5, "fat": 1.5, "carbs": 12 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of oats (cooked)" }],
+    "default_serving": "100g"
+  },
+  "cornflakes": {
+    "nutrition_per_100g": { "calories": 378, "protein": 7.5, "fat": 0.4, "carbs": 84 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of cornflakes" }],
+    "default_serving": "100g"
+  },
+  "suji halwa": {
+    "nutrition_per_100g": { "calories": 250, "protein": 4, "fat": 10, "carbs": 35 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of suji halwa" }],
+    "default_serving": "100g"
+  },
+  "adai dosa": {
+    "nutrition_per_100g": { "calories": 180, "protein": 8, "fat": 7, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of adai dosa" }],
+    "default_serving": "100g"
+  },
+  "rice": {
+    "nutrition_per_100g": { "calories": 130, "protein": 2.7, "fat": 0.3, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of rice (cooked)" }],
+    "default_serving": "100g"
+  },
+  "brown rice": {
+    "nutrition_per_100g": { "calories": 111, "protein": 2.6, "fat": 0.9, "carbs": 23 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of brown rice (cooked)" }],
+    "default_serving": "100g"
+  },
+  "jeera rice": {
+    "nutrition_per_100g": { "calories": 160, "protein": 3, "fat": 4, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of jeera rice" }],
+    "default_serving": "100g"
+  },
+  "lemon rice": {
+    "nutrition_per_100g": { "calories": 170, "protein": 3, "fat": 6, "carbs": 26 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of lemon rice" }],
+    "default_serving": "100g"
+  },
+  "curd rice": {
+    "nutrition_per_100g": { "calories": 140, "protein": 4, "fat": 4, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of curd rice" }],
+    "default_serving": "100g"
+  },
+  "dal": {
+    "nutrition_per_100g": { "calories": 110, "protein": 7, "fat": 2, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of dal (cooked)" }],
+    "default_serving": "100g"
+  },
+  "toor dal": {
+    "nutrition_per_100g": { "calories": 115, "protein": 8, "fat": 1, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of toor dal (cooked)" }],
+    "default_serving": "100g"
+  },
+  "masoor dal": {
+    "nutrition_per_100g": { "calories": 116, "protein": 9, "fat": 0.4, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of masoor dal (cooked)" }],
+    "default_serving": "100g"
+  },
+  "moong dal": {
+    "nutrition_per_100g": { "calories": 105, "protein": 7, "fat": 0.4, "carbs": 19 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of moong dal (cooked)" }],
+    "default_serving": "100g"
+  },
+  "rajma": {
+    "nutrition_per_100g": { "calories": 127, "protein": 8, "fat": 0.5, "carbs": 23 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of rajma (cooked)" }],
+    "default_serving": "100g"
+  },
+  "chole": {
+    "nutrition_per_100g": { "calories": 130, "protein": 7, "fat": 3, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chole (cooked)" }],
+    "default_serving": "100g"
+  },
+  "vegetable curry": {
+    "nutrition_per_100g": { "calories": 90, "protein": 2, "fat": 5, "carbs": 10 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of vegetable curry" }],
+    "default_serving": "100g"
+  },
+  "mix veg": {
+    "nutrition_per_100g": { "calories": 85, "protein": 2, "fat": 5, "carbs": 9 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of mix veg" }],
+    "default_serving": "100g"
+  },
+  "aloo gobi": {
+    "nutrition_per_100g": { "calories": 98, "protein": 3, "fat": 6, "carbs": 10 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of aloo gobi" }],
+    "default_serving": "100g"
+  },
+  "bhindi masala": {
+    "nutrition_per_100g": { "calories": 80, "protein": 2, "fat": 5, "carbs": 8 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bhindi masala" }],
+    "default_serving": "100g"
+  },
+  "baingan bharta": {
+    "nutrition_per_100g": { "calories": 102, "protein": 2, "fat": 8, "carbs": 8 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of baingan bharta" }],
+    "default_serving": "100g"
+  },
+  "lauki sabzi": {
+    "nutrition_per_100g": { "calories": 60, "protein": 1, "fat": 4, "carbs": 6 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of lauki sabzi" }],
+    "default_serving": "100g"
+  },
+  "tinda sabzi": {
+    "nutrition_per_100g": { "calories": 65, "protein": 2, "fat": 4, "carbs": 7 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of tinda sabzi" }],
+    "default_serving": "100g"
+  },
+  "palak paneer": {
+    "nutrition_per_100g": { "calories": 140, "protein": 8, "fat": 10, "carbs": 5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of palak paneer" }],
+    "default_serving": "100g"
+  },
+  "mutter paneer": {
+    "nutrition_per_100g": { "calories": 150, "protein": 9, "fat": 10, "carbs": 8 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of mutter paneer" }],
+    "default_serving": "100g"
+  },
+  "paneer butter masala": {
+    "nutrition_per_100g": { "calories": 180, "protein": 9, "fat": 14, "carbs": 6 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of paneer butter masala" }],
+    "default_serving": "100g"
+  },
+  "shahi paneer": {
+    "nutrition_per_100g": { "calories": 190, "protein": 10, "fat": 15, "carbs": 5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of shahi paneer" }],
+    "default_serving": "100g"
+  },
+  "chicken curry": {
+    "nutrition_per_100g": { "calories": 190, "protein": 15, "fat": 12, "carbs": 5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chicken curry" }],
+    "default_serving": "100g"
+  },
+  "butter chicken": {
+    "nutrition_per_100g": { "calories": 210, "protein": 16, "fat": 15, "carbs": 4 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of butter chicken" }],
+    "default_serving": "100g"
+  },
+  "kadai chicken": {
+    "nutrition_per_100g": { "calories": 200, "protein": 18, "fat": 13, "carbs": 4 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of kadai chicken" }],
+    "default_serving": "100g"
+  },
+  "fish curry": {
+    "nutrition_per_100g": { "calories": 160, "protein": 14, "fat": 10, "carbs": 4 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of fish curry" }],
+    "default_serving": "100g"
+  },
+  "egg curry": {
+    "nutrition_per_100g": { "calories": 150, "protein": 10, "fat": 10, "carbs": 5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of egg curry" }],
+    "default_serving": "100g"
+  },
+  "mutton curry": {
+    "nutrition_per_100g": { "calories": 220, "protein": 18, "fat": 15, "carbs": 3 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of mutton curry" }],
+    "default_serving": "100g"
+  },
+  "prawn curry": {
+    "nutrition_per_100g": { "calories": 140, "protein": 15, "fat": 8, "carbs": 3 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of prawn curry" }],
+    "default_serving": "100g"
+  },
+  "veg biryani": {
+    "nutrition_per_100g": { "calories": 180, "protein": 4, "fat": 6, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veg biryani" }],
+    "default_serving": "100g"
+  },
+  "chicken biryani": {
+    "nutrition_per_100g": { "calories": 210, "protein": 12, "fat": 8, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chicken biryani" }],
+    "default_serving": "100g"
+  },
+  "mutton biryani": {
+    "nutrition_per_100g": { "calories": 240, "protein": 14, "fat": 12, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of mutton biryani" }],
+    "default_serving": "100g"
+  },
+  "egg biryani": {
+    "nutrition_per_100g": { "calories": 190, "protein": 9, "fat": 7, "carbs": 24 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of egg biryani" }],
+    "default_serving": "100g"
+  },
+  "veg pulao": {
+    "nutrition_per_100g": { "calories": 170, "protein": 3, "fat": 5, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veg pulao" }],
+    "default_serving": "100g"
+  },
+  "tamarind rice": {
+    "nutrition_per_100g": { "calories": 210, "protein": 4, "fat": 8, "carbs": 32 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of tamarind rice" }],
+    "default_serving": "100g"
+  },
+  "sambar": {
+    "nutrition_per_100g": { "calories": 70, "protein": 3, "fat": 2, "carbs": 10 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of sambar" }],
+    "default_serving": "100g"
+  },
+  "dal fry": {
+    "nutrition_per_100g": { "calories": 120, "protein": 7, "fat": 4, "carbs": 15 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of dal fry" }],
+    "default_serving": "100g"
+  },
+  "dal tadka": {
+    "nutrition_per_100g": { "calories": 130, "protein": 7, "fat": 5, "carbs": 14 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of dal tadka" }],
+    "default_serving": "100g"
+  },
+  "veg thali": {
+    "nutrition_per_100g": { "calories": 150, "protein": 5, "fat": 5, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veg thali (average)" }],
+    "default_serving": "100g"
+  },
+  "non veg thali": {
+    "nutrition_per_100g": { "calories": 180, "protein": 10, "fat": 8, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of non veg thali (average)" }],
+    "default_serving": "100g"
+  },
+  "tandoori roti": {
+    "nutrition_per_100g": { "calories": 240, "protein": 8, "fat": 2, "carbs": 48 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of tandoori roti" }],
+    "default_serving": "100g"
+  },
+  "naan": {
+    "nutrition_per_100g": { "calories": 262, "protein": 9, "fat": 4, "carbs": 48 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of naan" }],
+    "default_serving": "100g"
+  },
+  "butter naan": {
+    "nutrition_per_100g": { "calories": 310, "protein": 9, "fat": 10, "carbs": 46 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of butter naan" }],
+    "default_serving": "100g"
+  },
+  "garlic naan": {
+    "nutrition_per_100g": { "calories": 300, "protein": 9, "fat": 8, "carbs": 47 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of garlic naan" }],
+    "default_serving": "100g"
+  },
+  "kulcha": {
+    "nutrition_per_100g": { "calories": 270, "protein": 8, "fat": 6, "carbs": 45 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of kulcha" }],
+    "default_serving": "100g"
+  },
+  "rumali roti": {
+    "nutrition_per_100g": { "calories": 220, "protein": 7, "fat": 1, "carbs": 46 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of rumali roti" }],
+    "default_serving": "100g"
+  },
+  "chapati": {
+    "nutrition_per_100g": { "calories": 220, "protein": 7, "fat": 1, "carbs": 45 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chapati" }],
+    "default_serving": "100g"
+  },
+  "sarson da saag": {
+    "nutrition_per_100g": { "calories": 120, "protein": 4, "fat": 8, "carbs": 9 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of sarson da saag" }],
+    "default_serving": "100g"
+  },
+  "makki di roti": {
+    "nutrition_per_100g": { "calories": 280, "protein": 6, "fat": 8, "carbs": 45 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of makki di roti" }],
+    "default_serving": "100g"
+  },
+  "litti chokha": {
+    "nutrition_per_100g": { "calories": 200, "protein": 6, "fat": 7, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of litti chokha" }],
+    "default_serving": "100g"
+  },
+  "dal bati churma": {
+    "nutrition_per_100g": { "calories": 280, "protein": 8, "fat": 12, "carbs": 35 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of dal bati churma" }],
+    "default_serving": "100g"
+  },
+  "handvo": {
+    "nutrition_per_100g": { "calories": 200, "protein": 7, "fat": 8, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of handvo" }],
+    "default_serving": "100g"
+  },
+  "pav bhaji": {
+    "nutrition_per_100g": { "calories": 160, "protein": 5, "fat": 8, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pav bhaji" }],
+    "default_serving": "100g"
+  },
+  "dhokla": {
+    "nutrition_per_100g": { "calories": 160, "protein": 6, "fat": 5, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of dhokla" }],
+    "default_serving": "100g"
+  },
+  "rasam rice": {
+    "nutrition_per_100g": { "calories": 120, "protein": 3, "fat": 2, "carbs": 23 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of rasam rice" }],
+    "default_serving": "100g"
+  },
+  "fish fry": {
+    "nutrition_per_100g": { "calories": 250, "protein": 20, "fat": 15, "carbs": 8 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of fish fry" }],
+    "default_serving": "100g"
+  },
+  "crab curry": {
+    "nutrition_per_100g": { "calories": 130, "protein": 15, "fat": 6, "carbs": 3 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of crab curry" }],
+    "default_serving": "100g"
+  },
+  "bengali fish curry": {
+    "nutrition_per_100g": { "calories": 170, "protein": 15, "fat": 10, "carbs": 5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bengali fish curry" }],
+    "default_serving": "100g"
+  },
+  "bamboo shoot curry": {
+    "nutrition_per_100g": { "calories": 70, "protein": 3, "fat": 4, "carbs": 6 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bamboo shoot curry" }],
+    "default_serving": "100g"
+  },
+  "chicken momo": {
+    "nutrition_per_100g": { "calories": 180, "protein": 12, "fat": 6, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chicken momo (steamed)" }],
+    "default_serving": "100g"
+  },
+  "veg momo": {
+    "nutrition_per_100g": { "calories": 150, "protein": 5, "fat": 4, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veg momo (steamed)" }],
+    "default_serving": "100g"
+  },
+  "malabar parotta": {
+    "nutrition_per_100g": { "calories": 300, "protein": 7, "fat": 12, "carbs": 40 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of malabar parotta" }],
+    "default_serving": "100g"
+  },
+  "appam stew": {
+    "nutrition_per_100g": { "calories": 120, "protein": 3, "fat": 5, "carbs": 16 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of appam with stew" }],
+    "default_serving": "100g"
+  },
+  "bisi bele bath": {
+    "nutrition_per_100g": { "calories": 160, "protein": 5, "fat": 5, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bisi bele bath" }],
+    "default_serving": "100g"
+  },
+  "akki roti": {
+    "nutrition_per_100g": { "calories": 230, "protein": 5, "fat": 8, "carbs": 35 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of akki roti" }],
+    "default_serving": "100g"
+  },
+  "neer dosa": {
+    "nutrition_per_100g": { "calories": 140, "protein": 3, "fat": 2, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of neer dosa" }],
+    "default_serving": "100g"
+  },
+  "ragi mudde": {
+    "nutrition_per_100g": { "calories": 120, "protein": 4, "fat": 1, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of ragi mudde" }],
+    "default_serving": "100g"
+  },
+  "chettinad chicken": {
+    "nutrition_per_100g": { "calories": 220, "protein": 20, "fat": 14, "carbs": 5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chettinad chicken" }],
+    "default_serving": "100g"
+  },
+  "malvani fish curry": {
+    "nutrition_per_100g": { "calories": 180, "protein": 16, "fat": 12, "carbs": 4 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of malvani fish curry" }],
+    "default_serving": "100g"
+  },
+  "samosa": {
+    "nutrition_per_100g": { "calories": 262, "protein": 5, "fat": 14, "carbs": 29 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of samosa" }],
+    "default_serving": "100g"
+  },
+  "pakora": {
+    "nutrition_per_100g": { "calories": 250, "protein": 6, "fat": 15, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pakora" }],
+    "default_serving": "100g"
+  },
+  "paneer pakora": {
+    "nutrition_per_100g": { "calories": 300, "protein": 10, "fat": 20, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of paneer pakora" }],
+    "default_serving": "100g"
+  },
+  "bread pakora": {
+    "nutrition_per_100g": { "calories": 280, "protein": 7, "fat": 16, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bread pakora" }],
+    "default_serving": "100g"
+  },
+  "aloo tikki": {
+    "nutrition_per_100g": { "calories": 150, "protein": 3, "fat": 7, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of aloo tikki" }],
+    "default_serving": "100g"
+  },
+  "bhel puri": {
+    "nutrition_per_100g": { "calories": 150, "protein": 3, "fat": 5, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bhel puri" }],
+    "default_serving": "100g"
+  },
+  "pani puri": {
+    "nutrition_per_100g": { "calories": 120, "protein": 3, "fat": 4, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pani puri" }],
+    "default_serving": "100g"
+  },
+  "sev puri": {
+    "nutrition_per_100g": { "calories": 180, "protein": 4, "fat": 9, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of sev puri" }],
+    "default_serving": "100g"
+  },
+  "momos": {
+    "nutrition_per_100g": { "calories": 160, "protein": 7, "fat": 5, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of momos (average)" }],
+    "default_serving": "100g"
+  },
+  "fries": {
+    "nutrition_per_100g": { "calories": 312, "protein": 3.4, "fat": 15, "carbs": 41 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of fries" }],
+    "default_serving": "100g"
+  },
+  "chips": {
+    "nutrition_per_100g": { "calories": 536, "protein": 7, "fat": 35, "carbs": 53 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chips" }],
+    "default_serving": "100g"
+  },
+  "roasted chana": {
+    "nutrition_per_100g": { "calories": 380, "protein": 20, "fat": 6, "carbs": 60 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of roasted chana" }],
+    "default_serving": "100g"
+  },
+  "peanuts": {
+    "nutrition_per_100g": { "calories": 567, "protein": 26, "fat": 49, "carbs": 16 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of peanuts" }],
+    "default_serving": "100g"
+  },
+  "cashews": {
+    "nutrition_per_100g": { "calories": 553, "protein": 18, "fat": 44, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of cashews" }],
+    "default_serving": "100g"
+  },
+  "almonds": {
+    "nutrition_per_100g": { "calories": 579, "protein": 21, "fat": 49, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of almonds" }],
+    "default_serving": "100g"
+  },
+  "trail mix": {
+    "nutrition_per_100g": { "calories": 480, "protein": 15, "fat": 30, "carbs": 45 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of trail mix" }],
+    "default_serving": "100g"
+  },
+  "banana chips": {
+    "nutrition_per_100g": { "calories": 519, "protein": 2.3, "fat": 34, "carbs": 58 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of banana chips" }],
+    "default_serving": "100g"
+  },
+  "murukku": {
+    "nutrition_per_100g": { "calories": 524, "protein": 5, "fat": 28, "carbs": 63 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of murukku" }],
+    "default_serving": "100g"
+  },
+  "namak pare": {
+    "nutrition_per_100g": { "calories": 450, "protein": 8, "fat": 25, "carbs": 50 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of namak pare" }],
+    "default_serving": "100g"
+  },
+  "poha chivda": {
+    "nutrition_per_100g": { "calories": 480, "protein": 8, "fat": 25, "carbs": 55 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of poha chivda" }],
+    "default_serving": "100g"
+  },
+  "corn chaat": {
+    "nutrition_per_100g": { "calories": 120, "protein": 4, "fat": 3, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of corn chaat" }],
+    "default_serving": "100g"
+  },
+  "masala peanuts": {
+    "nutrition_per_100g": { "calories": 580, "protein": 25, "fat": 48, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of masala peanuts" }],
+    "default_serving": "100g"
+  },
+  "roasted makhana": {
+    "nutrition_per_100g": { "calories": 350, "protein": 9, "fat": 1, "carbs": 77 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of roasted makhana" }],
+    "default_serving": "100g"
+  },
+  "sandwich": {
+    "nutrition_per_100g": { "calories": 250, "protein": 12, "fat": 10, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of sandwich (average)" }],
+    "default_serving": "100g"
+  },
+  "veg cutlet": {
+    "nutrition_per_100g": { "calories": 180, "protein": 5, "fat": 8, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veg cutlet" }],
+    "default_serving": "100g"
+  },
+  "paneer roll": {
+    "nutrition_per_100g": { "calories": 260, "protein": 12, "fat": 14, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of paneer roll" }],
+    "default_serving": "100g"
+  },
+  "veg puff": {
+    "nutrition_per_100g": { "calories": 350, "protein": 6, "fat": 20, "carbs": 35 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veg puff" }],
+    "default_serving": "100g"
+  },
+  "chicken roll": {
+    "nutrition_per_100g": { "calories": 280, "protein": 15, "fat": 15, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chicken roll" }],
+    "default_serving": "100g"
+  },
+  "egg roll": {
+    "nutrition_per_100g": { "calories": 250, "protein": 10, "fat": 12, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of egg roll" }],
+    "default_serving": "100g"
+  },
+  "maggie noodles": {
+    "nutrition_per_100g": { "calories": 190, "protein": 4, "fat": 8, "carbs": 26 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of maggie noodles (cooked)" }],
+    "default_serving": "100g"
+  },
+  "veg noodles": {
+    "nutrition_per_100g": { "calories": 138, "protein": 4.5, "fat": 2.1, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veg noodles" }],
+    "default_serving": "100g"
+  },
+  "spring roll": {
+    "nutrition_per_100g": { "calories": 240, "protein": 6, "fat": 12, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of spring roll (fried)" }],
+    "default_serving": "100g"
+  },
+  "veg burger": {
+    "nutrition_per_100g": { "calories": 250, "protein": 10, "fat": 10, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veg burger" }],
+    "default_serving": "100g"
+  },
+  "chicken burger": {
+    "nutrition_per_100g": { "calories": 280, "protein": 15, "fat": 12, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chicken burger" }],
+    "default_serving": "100g"
+  },
+  "pav vada": {
+    "nutrition_per_100g": { "calories": 290, "protein": 8, "fat": 12, "carbs": 40 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pav vada" }],
+    "default_serving": "100g"
+  },
+  "frankie roll": {
+    "nutrition_per_100g": { "calories": 250, "protein": 10, "fat": 12, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of frankie roll" }],
+    "default_serving": "100g"
+  },
+  "bondas": {
+    "nutrition_per_100g": { "calories": 220, "protein": 5, "fat": 12, "carbs": 24 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bondas" }],
+    "default_serving": "100g"
+  },
+  "vada": {
+    "nutrition_per_100g": { "calories": 240, "protein": 9, "fat": 13, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of vada" }],
+    "default_serving": "100g"
+  },
+  "black tea": {
+    "nutrition_per_100g": { "calories": 1, "protein": 0.1, "fat": 0, "carbs": 0.3 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup black tea (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml black tea" }],
+    "default_serving": "cup"
+  },
+  "green tea": {
+    "nutrition_per_100g": { "calories": 1, "protein": 0.1, "fat": 0, "carbs": 0.2 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup green tea (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml green tea" }],
+    "default_serving": "cup"
+  },
+  "lemon tea": {
+    "nutrition_per_100g": { "calories": 3, "protein": 0.1, "fat": 0, "carbs": 1 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup lemon tea (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml lemon tea" }],
+    "default_serving": "cup"
+  },
+  "cold coffee": {
+    "nutrition_per_100g": { "calories": 50, "protein": 2, "fat": 1, "carbs": 8 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup cold coffee (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml cold coffee" }],
+    "default_serving": "cup"
+  },
+  "lassi": {
+    "nutrition_per_100g": { "calories": 72, "protein": 2.5, "fat": 1, "carbs": 13 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup lassi (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml lassi" }],
+    "default_serving": "cup"
+  },
+  "sweet lassi": {
+    "nutrition_per_100g": { "calories": 97, "protein": 2, "fat": 1, "carbs": 19 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup sweet lassi (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml sweet lassi" }],
+    "default_serving": "cup"
+  },
+  "salted lassi": {
+    "nutrition_per_100g": { "calories": 72, "protein": 2.5, "fat": 1, "carbs": 13 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup salted lassi (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml salted lassi" }],
+    "default_serving": "cup"
+  },
+  "buttermilk": {
+    "nutrition_per_100g": { "calories": 40, "protein": 3.3, "fat": 0.9, "carbs": 4.8 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup buttermilk (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml buttermilk" }],
+    "default_serving": "cup"
+  },
+  "chaas": {
+    "nutrition_per_100g": { "calories": 30, "protein": 2, "fat": 1, "carbs": 3 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chaas" }],
+    "default_serving": "100g"
+  },
+  "coconut water": {
+    "nutrition_per_100g": { "calories": 19, "protein": 0.7, "fat": 0.2, "carbs": 3.7 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup coconut water (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml coconut water" }],
+    "default_serving": "cup"
+  },
+  "mango shake": {
+    "nutrition_per_100g": { "calories": 90, "protein": 2, "fat": 2, "carbs": 17 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup mango shake (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml mango shake" }],
+    "default_serving": "cup"
+  },
+  "banana shake": {
+    "nutrition_per_100g": { "calories": 110, "protein": 3, "fat": 2, "carbs": 22 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup banana shake (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml banana shake" }],
+    "default_serving": "cup"
+  },
+  "strawberry shake": {
+    "nutrition_per_100g": { "calories": 80, "protein": 2, "fat": 1.5, "carbs": 15 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup strawberry shake (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml strawberry shake" }],
+    "default_serving": "cup"
+  },
+  "milkshake": {
+    "nutrition_per_100g": { "calories": 110, "protein": 3, "fat": 3, "carbs": 18 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup milkshake (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml milkshake" }],
+    "default_serving": "cup"
+  },
+  "smoothie": {
+    "nutrition_per_100g": { "calories": 60, "protein": 1, "fat": 0.5, "carbs": 14 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of smoothie" }],
+    "default_serving": "100g"
+  },
+  "fruit juice": {
+    "nutrition_per_100g": { "calories": 46, "protein": 0.5, "fat": 0.1, "carbs": 11 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup fruit juice (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml fruit juice" }],
+    "default_serving": "cup"
+  },
+  "orange juice": {
+    "nutrition_per_100g": { "calories": 45, "protein": 0.7, "fat": 0.2, "carbs": 10 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup orange juice (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml orange juice" }],
+    "default_serving": "cup"
+  },
+  "apple juice": {
+    "nutrition_per_100g": { "calories": 46, "protein": 0.1, "fat": 0.1, "carbs": 11 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup apple juice (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml apple juice" }],
+    "default_serving": "cup"
+  },
+  "soda": {
+    "nutrition_per_100g": { "calories": 41, "protein": 0, "fat": 0, "carbs": 11 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of soda" }],
+    "default_serving": "100g"
+  },
+  "lemon water": {
+    "nutrition_per_100g": { "calories": 2, "protein": 0.1, "fat": 0, "carbs": 0.5 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup lemon water (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml lemon water" }],
+    "default_serving": "cup"
+  },
+  "jal jeera": {
+    "nutrition_per_100g": { "calories": 10, "protein": 0.2, "fat": 0.1, "carbs": 2 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of jal jeera" }],
+    "default_serving": "100g"
+  },
+  "tender coconut water": {
+    "nutrition_per_100g": { "calories": 19, "protein": 0.7, "fat": 0.2, "carbs": 3.7 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup tender coconut water (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml tender coconut water" }],
+    "default_serving": "cup"
+  },
+  "rose milk": {
+    "nutrition_per_100g": { "calories": 85, "protein": 3, "fat": 2, "carbs": 14 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup rose milk (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml rose milk" }],
+    "default_serving": "cup"
+  },
+  "banana": {
+    "nutrition_per_100g": { "calories": 89, "protein": 1.1, "fat": 0.3, "carbs": 23 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of banana" }],
+    "default_serving": "100g"
+  },
+  "apple": {
+    "nutrition_per_100g": { "calories": 52, "protein": 0.3, "fat": 0.2, "carbs": 14 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of apple" }],
+    "default_serving": "100g"
+  },
+  "mango": {
+    "nutrition_per_100g": { "calories": 60, "protein": 0.8, "fat": 0.4, "carbs": 15 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of mango" }],
+    "default_serving": "100g"
+  },
+  "orange": {
+    "nutrition_per_100g": { "calories": 47, "protein": 0.9, "fat": 0.1, "carbs": 12 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of orange" }],
+    "default_serving": "100g"
+  },
+  "guava": {
+    "nutrition_per_100g": { "calories": 68, "protein": 2.6, "fat": 1, "carbs": 14 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of guava" }],
+    "default_serving": "100g"
+  },
+  "papaya": {
+    "nutrition_per_100g": { "calories": 43, "protein": 0.5, "fat": 0.3, "carbs": 11 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of papaya" }],
+    "default_serving": "100g"
+  },
+  "grapes": {
+    "nutrition_per_100g": { "calories": 69, "protein": 0.7, "fat": 0.2, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of grapes" }],
+    "default_serving": "100g"
+  },
+  "watermelon": {
+    "nutrition_per_100g": { "calories": 30, "protein": 0.6, "fat": 0.2, "carbs": 8 },
+    "servings": [{ "unit": "cup", "grams": 152, "description": "1 cup watermelon" }, { "unit": "100g", "grams": 100, "description": "Per 100g watermelon" }],
+    "default_serving": "100g"
+  },
+  "pomegranate": {
+    "nutrition_per_100g": { "calories": 83, "protein": 1.7, "fat": 1.2, "carbs": 19 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pomegranate" }],
+    "default_serving": "100g"
+  },
+  "strawberry": {
+    "nutrition_per_100g": { "calories": 32, "protein": 0.7, "fat": 0.3, "carbs": 8 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of strawberry" }],
+    "default_serving": "100g"
+  },
+  "pear": {
+    "nutrition_per_100g": { "calories": 57, "protein": 0.4, "fat": 0.1, "carbs": 15 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pear" }],
+    "default_serving": "100g"
+  },
+  "chikoo": {
+    "nutrition_per_100g": { "calories": 83, "protein": 0.4, "fat": 1.1, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chikoo" }],
+    "default_serving": "100g"
+  },
+  "dates": {
+    "nutrition_per_100g": { "calories": 282, "protein": 2.5, "fat": 0.4, "carbs": 75 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of dates" }],
+    "default_serving": "100g"
+  },
+  "figs": {
+    "nutrition_per_100g": { "calories": 74, "protein": 0.8, "fat": 0.3, "carbs": 19 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of figs" }],
+    "default_serving": "100g"
+  },
+  "custard apple": {
+    "nutrition_per_100g": { "calories": 101, "protein": 1.7, "fat": 0.6, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of custard apple" }],
+    "default_serving": "100g"
+  },
+  "jackfruit": {
+    "nutrition_per_100g": { "calories": 95, "protein": 1.7, "fat": 0.6, "carbs": 23 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of jackfruit" }],
+    "default_serving": "100g"
+  },
+  "kiwi": {
+    "nutrition_per_100g": { "calories": 61, "protein": 1.1, "fat": 0.5, "carbs": 15 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of kiwi" }],
+    "default_serving": "100g"
+  },
+  "plum": {
+    "nutrition_per_100g": { "calories": 46, "protein": 0.7, "fat": 0.3, "carbs": 11 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of plum" }],
+    "default_serving": "100g"
+  },
+  "muskmelon": {
+    "nutrition_per_100g": { "calories": 34, "protein": 0.8, "fat": 0.2, "carbs": 8 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of muskmelon" }],
+    "default_serving": "100g"
+  },
+  "black grapes": {
+    "nutrition_per_100g": { "calories": 69, "protein": 0.7, "fat": 0.2, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of black grapes" }],
+    "default_serving": "100g"
+  },
+  "lychee": {
+    "nutrition_per_100g": { "calories": 66, "protein": 0.8, "fat": 0.4, "carbs": 17 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of lychee" }],
+    "default_serving": "100g"
+  },
+  "potato": {
+    "nutrition_per_100g": { "calories": 77, "protein": 2, "fat": 0.1, "carbs": 17 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of potato (raw)" }],
+    "default_serving": "100g"
+  },
+  "onion": {
+    "nutrition_per_100g": { "calories": 40, "protein": 1.1, "fat": 0.1, "carbs": 9 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of onion" }],
+    "default_serving": "100g"
+  },
+  "carrot": {
+    "nutrition_per_100g": { "calories": 41, "protein": 0.9, "fat": 0.2, "carbs": 10 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of carrot" }],
+    "default_serving": "100g"
+  },
+  "cabbage": {
+    "nutrition_per_100g": { "calories": 25, "protein": 1.3, "fat": 0.1, "carbs": 6 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of cabbage" }],
+    "default_serving": "100g"
+  },
+  "cauliflower": {
+    "nutrition_per_100g": { "calories": 25, "protein": 1.9, "fat": 0.3, "carbs": 5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of cauliflower" }],
+    "default_serving": "100g"
+  },
+  "spinach": {
+    "nutrition_per_100g": { "calories": 23, "protein": 2.9, "fat": 0.4, "carbs": 3.6 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of spinach" }],
+    "default_serving": "100g"
+  },
+  "peas": {
+    "nutrition_per_100g": { "calories": 81, "protein": 5, "fat": 0.4, "carbs": 14 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of peas" }],
+    "default_serving": "100g"
+  },
+  "beans": {
+    "nutrition_per_100g": { "calories": 31, "protein": 1.8, "fat": 0.2, "carbs": 7 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of beans (green)" }],
+    "default_serving": "100g"
+  },
+  "ladyfinger": {
+    "nutrition_per_100g": { "calories": 33, "protein": 1.9, "fat": 0.2, "carbs": 7 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of ladyfinger (okra)" }],
+    "default_serving": "100g"
+  },
+  "bottle gourd": {
+    "nutrition_per_100g": { "calories": 14, "protein": 0.6, "fat": 0, "carbs": 3.4 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bottle gourd" }],
+    "default_serving": "100g"
+  },
+  "bitter gourd": {
+    "nutrition_per_100g": { "calories": 17, "protein": 1, "fat": 0.2, "carbs": 3.7 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bitter gourd" }],
+    "default_serving": "100g"
+  },
+  "pumpkin": {
+    "nutrition_per_100g": { "calories": 26, "protein": 1, "fat": 0.1, "carbs": 6.5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pumpkin" }],
+    "default_serving": "100g"
+  },
+  "brinjal": {
+    "nutrition_per_100g": { "calories": 25, "protein": 1, "fat": 0.2, "carbs": 6 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of brinjal (eggplant)" }],
+    "default_serving": "100g"
+  },
+  "drumstick": {
+    "nutrition_per_100g": { "calories": 37, "protein": 2.1, "fat": 0.2, "carbs": 8.5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of drumstick (vegetable)" }],
+    "default_serving": "100g"
+  },
+  "radish": {
+    "nutrition_per_100g": { "calories": 16, "protein": 0.7, "fat": 0.1, "carbs": 3.4 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of radish" }],
+    "default_serving": "100g"
+  },
+  "cucumber": {
+    "nutrition_per_100g": { "calories": 15, "protein": 0.7, "fat": 0.1, "carbs": 3.6 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of cucumber" }],
+    "default_serving": "100g"
+  },
+  "beetroot": {
+    "nutrition_per_100g": { "calories": 43, "protein": 1.6, "fat": 0.2, "carbs": 10 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of beetroot" }],
+    "default_serving": "100g"
+  },
+  "green chili": {
+    "nutrition_per_100g": { "calories": 40, "protein": 1.9, "fat": 0.4, "carbs": 9 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of green chili" }],
+    "default_serving": "100g"
+  },
+  "garlic": {
+    "nutrition_per_100g": { "calories": 149, "protein": 6.4, "fat": 0.5, "carbs": 33 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of garlic" }],
+    "default_serving": "100g"
+  },
+  "ginger": {
+    "nutrition_per_100g": { "calories": 80, "protein": 1.8, "fat": 0.8, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of ginger" }],
+    "default_serving": "100g"
+  },
+  "capsicum": {
+    "nutrition_per_100g": { "calories": 26, "protein": 1, "fat": 0.2, "carbs": 6 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of capsicum (bell pepper)" }],
+    "default_serving": "100g"
+  },
+  "broccoli": {
+    "nutrition_per_100g": { "calories": 34, "protein": 2.8, "fat": 0.4, "carbs": 7 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of broccoli" }],
+    "default_serving": "100g"
+  },
+  "mushroom": {
+    "nutrition_per_100g": { "calories": 22, "protein": 3.1, "fat": 0.3, "carbs": 3.3 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of mushroom" }],
+    "default_serving": "100g"
+  },
+  "corn": {
+    "nutrition_per_100g": { "calories": 86, "protein": 3.2, "fat": 1.2, "carbs": 19 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of corn" }],
+    "default_serving": "100g"
+  },
+  "sweet potato": {
+    "nutrition_per_100g": { "calories": 86, "protein": 1.6, "fat": 0.1, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of sweet potato" }],
+    "default_serving": "100g"
+  },
+  "zucchini": {
+    "nutrition_per_100g": { "calories": 17, "protein": 1.2, "fat": 0.3, "carbs": 3.1 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of zucchini" }],
+    "default_serving": "100g"
+  },
+  "gulab jamun": {
+    "nutrition_per_100g": { "calories": 300, "protein": 5, "fat": 15, "carbs": 40 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of gulab jamun" }],
+    "default_serving": "100g"
+  },
+  "rasmalai": {
+    "nutrition_per_100g": { "calories": 230, "protein": 8, "fat": 12, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of rasmalai" }],
+    "default_serving": "100g"
+  },
+  "barfi": {
+    "nutrition_per_100g": { "calories": 420, "protein": 8, "fat": 20, "carbs": 55 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of barfi" }],
+    "default_serving": "100g"
+  },
+  "kaju katli": {
+    "nutrition_per_100g": { "calories": 450, "protein": 10, "fat": 25, "carbs": 50 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of kaju katli" }],
+    "default_serving": "100g"
+  },
+  "besan laddu": {
+    "nutrition_per_100g": { "calories": 480, "protein": 10, "fat": 28, "carbs": 50 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of besan laddu" }],
+    "default_serving": "100g"
+  },
+  "gajar halwa": {
+    "nutrition_per_100g": { "calories": 220, "protein": 4, "fat": 10, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of gajar halwa" }],
+    "default_serving": "100g"
+  },
+  "moong dal halwa": {
+    "nutrition_per_100g": { "calories": 350, "protein": 8, "fat": 18, "carbs": 40 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of moong dal halwa" }],
+    "default_serving": "100g"
+  },
+  "kheer": {
+    "nutrition_per_100g": { "calories": 140, "protein": 4, "fat": 4, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of kheer" }],
+    "default_serving": "100g"
+  },
+  "kulfi": {
+    "nutrition_per_100g": { "calories": 200, "protein": 5, "fat": 12, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of kulfi" }],
+    "default_serving": "100g"
+  },
+  "ice cream": {
+    "nutrition_per_100g": { "calories": 207, "protein": 3.5, "fat": 11, "carbs": 24 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of ice cream" }],
+    "default_serving": "100g"
+  },
+  "custard": {
+    "nutrition_per_100g": { "calories": 120, "protein": 4, "fat": 4, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of custard" }],
+    "default_serving": "100g"
+  },
+  "sugarcane juice": {
+    "nutrition_per_100g": { "calories": 74, "protein": 0.1, "fat": 0, "carbs": 18 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup sugarcane juice (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml sugarcane juice" }],
+    "default_serving": "cup"
+  },
+  "sago pudding": {
+    "nutrition_per_100g": { "calories": 120, "protein": 1, "fat": 3, "carbs": 23 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of sago pudding" }],
+    "default_serving": "100g"
+  },
+  "pizza": {
+    "nutrition_per_100g": { "calories": 266, "protein": 11, "fat": 10, "carbs": 33 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pizza (average)" }],
+    "default_serving": "100g"
+  },
+  "burger": {
+    "nutrition_per_100g": { "calories": 270, "protein": 13, "fat": 12, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of burger (average)" }],
+    "default_serving": "100g"
+  },
+  "pasta": {
+    "nutrition_per_100g": { "calories": 131, "protein": 5, "fat": 1, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pasta (cooked)" }],
+    "default_serving": "100g"
+  },
+  "chow mein": {
+    "nutrition_per_100g": { "calories": 140, "protein": 6, "fat": 5, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chow mein" }],
+    "default_serving": "100g"
+  },
+  "noodles": {
+    "nutrition_per_100g": { "calories": 138, "protein": 4.5, "fat": 2.1, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of noodles (cooked)" }],
+    "default_serving": "100g"
+  },
+  "fried rice": {
+    "nutrition_per_100g": { "calories": 174, "protein": 6, "fat": 5, "carbs": 26 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of fried rice" }],
+    "default_serving": "100g"
+  },
+  "french fries": {
+    "nutrition_per_100g": { "calories": 312, "protein": 3.4, "fat": 15, "carbs": 41 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of french fries" }],
+    "default_serving": "100g"
+  },
+  "salad": {
+    "nutrition_per_100g": { "calories": 50, "protein": 2, "fat": 2, "carbs": 7 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of salad (basic)" }],
+    "default_serving": "100g"
+  },
+  "soup": {
+    "nutrition_per_100g": { "calories": 42, "protein": 1.5, "fat": 2, "carbs": 5 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup soup (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml soup" }],
+    "default_serving": "cup"
+  },
+  "grilled chicken": {
+    "nutrition_per_100g": { "calories": 165, "protein": 31, "fat": 3.6, "carbs": 0 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of grilled chicken breast" }],
+    "default_serving": "100g"
+  },
+  "cereal": {
+    "nutrition_per_100g": { "calories": 380, "protein": 8, "fat": 2, "carbs": 82 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of cereal (average)" }],
+    "default_serving": "100g"
+  },
+  "yogurt": {
+    "nutrition_per_100g": { "calories": 61, "protein": 10, "fat": 0.4, "carbs": 3.6 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of yogurt (plain, non-fat)" }],
+    "default_serving": "100g"
+  },
+  "smoothie bowl": {
+    "nutrition_per_100g": { "calories": 80, "protein": 2, "fat": 2, "carbs": 15 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of smoothie bowl" }],
+    "default_serving": "100g"
+  },
+  "avocado toast": {
+    "nutrition_per_100g": { "calories": 200, "protein": 6, "fat": 12, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of avocado toast" }],
+    "default_serving": "100g"
+  },
+  "hot dog": {
+    "nutrition_per_100g": { "calories": 290, "protein": 10, "fat": 15, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of hot dog with bun" }],
+    "default_serving": "100g"
+  },
+  "taco": {
+    "nutrition_per_100g": { "calories": 226, "protein": 12, "fat": 11, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of taco (beef)" }],
+    "default_serving": "100g"
+  },
+  "burrito": {
+    "nutrition_per_100g": { "calories": 190, "protein": 9, "fat": 6, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of burrito (bean)" }],
+    "default_serving": "100g"
+  },
+  "nachos": {
+    "nutrition_per_100g": { "calories": 340, "protein": 12, "fat": 18, "carbs": 35 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of nachos with cheese" }],
+    "default_serving": "100g"
+  },
+  "quesadilla": {
+    "nutrition_per_100g": { "calories": 320, "protein": 15, "fat": 18, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of quesadilla (cheese)" }],
+    "default_serving": "100g"
+  },
+  "enchilada": {
+    "nutrition_per_100g": { "calories": 160, "protein": 9, "fat": 8, "carbs": 14 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of enchilada (cheese)" }],
+    "default_serving": "100g"
+  },
+  "falafel": {
+    "nutrition_per_100g": { "calories": 333, "protein": 13, "fat": 18, "carbs": 32 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of falafel" }],
+    "default_serving": "100g"
+  },
+  "shawarma": {
+    "nutrition_per_100g": { "calories": 200, "protein": 15, "fat": 10, "carbs": 12 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of shawarma (chicken)" }],
+    "default_serving": "100g"
+  },
+  "gyros": {
+    "nutrition_per_100g": { "calories": 210, "protein": 12, "fat": 12, "carbs": 15 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of gyros" }],
+    "default_serving": "100g"
+  },
+  "fish and chips": {
+    "nutrition_per_100g": { "calories": 280, "protein": 12, "fat": 15, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of fish and chips" }],
+    "default_serving": "100g"
+  },
+  "chicken nuggets": {
+    "nutrition_per_100g": { "calories": 296, "protein": 15, "fat": 19, "carbs": 16 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chicken nuggets" }],
+    "default_serving": "100g"
+  },
+  "spring rolls": {
+    "nutrition_per_100g": { "calories": 240, "protein": 6, "fat": 12, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of spring rolls (fried)" }],
+    "default_serving": "100g"
+  },
+  "dumplings": {
+    "nutrition_per_100g": { "calories": 220, "protein": 9, "fat": 10, "carbs": 24 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of dumplings (pork, steamed)" }],
+    "default_serving": "100g"
+  },
+  "bao buns": {
+    "nutrition_per_100g": { "calories": 250, "protein": 8, "fat": 8, "carbs": 35 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bao buns (pork)" }],
+    "default_serving": "100g"
+  },
+  "pierogi": {
+    "nutrition_per_100g": { "calories": 195, "protein": 5, "fat": 3, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pierogi (potato & cheese)" }],
+    "default_serving": "100g"
+  },
+  "empanadas": {
+    "nutrition_per_100g": { "calories": 290, "protein": 10, "fat": 16, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of empanadas (beef)" }],
+    "default_serving": "100g"
+  },
+  "sushi": {
+    "nutrition_per_100g": { "calories": 143, "protein": 5, "fat": 2, "carbs": 26 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of sushi (California roll)" }],
+    "default_serving": "100g"
+  },
+  "ramen": {
+    "nutrition_per_100g": { "calories": 150, "protein": 6, "fat": 5, "carbs": 20 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of ramen (with broth)" }],
+    "default_serving": "100g"
+  },
+  "udon": {
+    "nutrition_per_100g": { "calories": 120, "protein": 4, "fat": 1, "carbs": 24 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of udon (with broth)" }],
+    "default_serving": "100g"
+  },
+  "pho": {
+    "nutrition_per_100g": { "calories": 70, "protein": 6, "fat": 2, "carbs": 7 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pho (beef)" }],
+    "default_serving": "100g"
+  },
+  "pad thai": {
+    "nutrition_per_100g": { "calories": 175, "protein": 7, "fat": 7, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pad thai" }],
+    "default_serving": "100g"
+  },
+  "curry rice": {
+    "nutrition_per_100g": { "calories": 150, "protein": 4, "fat": 5, "carbs": 23 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of curry rice" }],
+    "default_serving": "100g"
+  },
+  "beef stew": {
+    "nutrition_per_100g": { "calories": 95, "protein": 8, "fat": 4, "carbs": 7 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of beef stew" }],
+    "default_serving": "100g"
+  },
+  "chili con carne": {
+    "nutrition_per_100g": { "calories": 135, "protein": 9, "fat": 6, "carbs": 12 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chili con carne" }],
+    "default_serving": "100g"
+  },
+  "lasagna": {
+    "nutrition_per_100g": { "calories": 160, "protein": 10, "fat": 8, "carbs": 13 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of lasagna (meat)" }],
+    "default_serving": "100g"
+  },
+  "spaghetti bolognese": {
+    "nutrition_per_100g": { "calories": 140, "protein": 8, "fat": 6, "carbs": 15 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of spaghetti bolognese" }],
+    "default_serving": "100g"
+  },
+  "mac and cheese": {
+    "nutrition_per_100g": { "calories": 210, "protein": 8, "fat": 10, "carbs": 22 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of mac and cheese" }],
+    "default_serving": "100g"
+  },
+  "grilled salmon": {
+    "nutrition_per_100g": { "calories": 208, "protein": 20, "fat": 13, "carbs": 0 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of grilled salmon" }],
+    "default_serving": "100g"
+  },
+  "roast chicken": {
+    "nutrition_per_100g": { "calories": 190, "protein": 28, "fat": 8, "carbs": 0 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of roast chicken" }],
+    "default_serving": "100g"
+  },
+  "beef burger": {
+    "nutrition_per_100g": { "calories": 280, "protein": 14, "fat": 14, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of beef burger" }],
+    "default_serving": "100g"
+  },
+  "veggie burger": {
+    "nutrition_per_100g": { "calories": 250, "protein": 10, "fat": 10, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of veggie burger" }],
+    "default_serving": "100g"
+  },
+  "caesar salad": {
+    "nutrition_per_100g": { "calories": 180, "protein": 6, "fat": 15, "carbs": 5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of caesar salad with dressing" }],
+    "default_serving": "100g"
+  },
+  "greek salad": {
+    "nutrition_per_100g": { "calories": 100, "protein": 4, "fat": 8, "carbs": 4 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of greek salad" }],
+    "default_serving": "100g"
+  },
+  "pizza margherita": {
+    "nutrition_per_100g": { "calories": 240, "protein": 10, "fat": 8, "carbs": 32 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pizza margherita" }],
+    "default_serving": "100g"
+  },
+  "pancakes": {
+    "nutrition_per_100g": { "calories": 227, "protein": 6, "fat": 9, "carbs": 28 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of pancakes" }],
+    "default_serving": "100g"
+  },
+  "waffles": {
+    "nutrition_per_100g": { "calories": 291, "protein": 8, "fat": 14, "carbs": 33 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of waffles" }],
+    "default_serving": "100g"
+  },
+  "croissant": {
+    "nutrition_per_100g": { "calories": 406, "protein": 8, "fat": 21, "carbs": 46 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of croissant" }],
+    "default_serving": "100g"
+  },
+  "bagel": {
+    "nutrition_per_100g": { "calories": 250, "protein": 10, "fat": 1.5, "carbs": 48 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of bagel" }],
+    "default_serving": "100g"
+  },
+  "french toast": {
+    "nutrition_per_100g": { "calories": 230, "protein": 8, "fat": 10, "carbs": 26 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of french toast" }],
+    "default_serving": "100g"
+  },
+  "oatmeal": {
+    "nutrition_per_100g": { "calories": 71, "protein": 2.5, "fat": 1.5, "carbs": 12 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of oatmeal (cooked)" }],
+    "default_serving": "100g"
+  },
+  "muesli": {
+    "nutrition_per_100g": { "calories": 390, "protein": 10, "fat": 8, "carbs": 65 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of muesli" }],
+    "default_serving": "100g"
+  },
+  "scrambled eggs": {
+    "nutrition_per_100g": { "calories": 149, "protein": 10, "fat": 11, "carbs": 1.5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of scrambled eggs" }],
+    "default_serving": "100g"
+  },
+  "poached eggs": {
+    "nutrition_per_100g": { "calories": 143, "protein": 12, "fat": 9.5, "carbs": 0.7 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of poached eggs" }],
+    "default_serving": "100g"
+  },
+  "eggs benedict": {
+    "nutrition_per_100g": { "calories": 260, "protein": 12, "fat": 18, "carbs": 12 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of eggs benedict" }],
+    "default_serving": "100g"
+  },
+  "cheesecake": {
+    "nutrition_per_100g": { "calories": 321, "protein": 6, "fat": 23, "carbs": 26 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of cheesecake" }],
+    "default_serving": "100g"
+  },
+  "brownie": {
+    "nutrition_per_100g": { "calories": 466, "protein": 5, "fat": 28, "carbs": 55 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of brownie" }],
+    "default_serving": "100g"
+  },
+  "apple pie": {
+    "nutrition_per_100g": { "calories": 237, "protein": 2, "fat": 11, "carbs": 34 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of apple pie" }],
+    "default_serving": "100g"
+  },
+  "chocolate cake": {
+    "nutrition_per_100g": { "calories": 420, "protein": 5, "fat": 22, "carbs": 55 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of chocolate cake" }],
+    "default_serving": "100g"
+  },
+  "ice cream sundae": {
+    "nutrition_per_100g": { "calories": 220, "protein": 4, "fat": 10, "carbs": 30 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of ice cream sundae" }],
+    "default_serving": "100g"
+  },
+  "tiramisu": {
+    "nutrition_per_100g": { "calories": 280, "protein": 6, "fat": 18, "carbs": 25 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of tiramisu" }],
+    "default_serving": "100g"
+  },
+  "panna cotta": {
+    "nutrition_per_100g": { "calories": 220, "protein": 3, "fat": 15, "carbs": 18 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of panna cotta" }],
+    "default_serving": "100g"
+  },
+  "creme brulee": {
+    "nutrition_per_100g": { "calories": 250, "protein": 5, "fat": 18, "carbs": 17 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of creme brulee" }],
+    "default_serving": "100g"
+  },
+  "cupcake": {
+    "nutrition_per_100g": { "calories": 380, "protein": 4, "fat": 18, "carbs": 52 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of cupcake" }],
+    "default_serving": "100g"
+  },
+  "macaron": {
+    "nutrition_per_100g": { "calories": 450, "protein": 9, "fat": 22, "carbs": 55 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of macaron" }],
+    "default_serving": "100g"
+  },
+  "gelato": {
+    "nutrition_per_100g": { "calories": 180, "protein": 4, "fat": 8, "carbs": 24 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of gelato" }],
+    "default_serving": "100g"
+  },
+  "mochi": {
+    "nutrition_per_100g": { "calories": 234, "protein": 1, "fat": 0.2, "carbs": 56 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of mochi" }],
+    "default_serving": "100g"
+  },
+  "espresso": {
+    "nutrition_per_100g": { "calories": 3, "protein": 0.1, "fat": 0.1, "carbs": 0 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of espresso" }],
+    "default_serving": "100g"
+  },
+  "latte": {
+    "nutrition_per_100g": { "calories": 54, "protein": 3.3, "fat": 1.8, "carbs": 5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of latte" }],
+    "default_serving": "100g"
+  },
+  "cappuccino": {
+    "nutrition_per_100g": { "calories": 45, "protein": 2.8, "fat": 1.5, "carbs": 4.5 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of cappuccino" }],
+    "default_serving": "100g"
+  },
+  "americano": {
+    "nutrition_per_100g": { "calories": 2, "protein": 0.1, "fat": 0, "carbs": 0.4 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of americano" }],
+    "default_serving": "100g"
+  },
+  "green smoothie": {
+    "nutrition_per_100g": { "calories": 50, "protein": 1, "fat": 0.5, "carbs": 12 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of green smoothie" }],
+    "default_serving": "100g"
+  },
+  "protein shake": {
+    "nutrition_per_100g": { "calories": 80, "protein": 12, "fat": 1, "carbs": 5 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup protein shake (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml protein shake" }],
+    "default_serving": "cup"
+  },
+  "fruit punch": {
+    "nutrition_per_100g": { "calories": 50, "protein": 0, "fat": 0, "carbs": 13 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of fruit punch" }],
+    "default_serving": "100g"
+  },
+  "hot chocolate": {
+    "nutrition_per_100g": { "calories": 90, "protein": 4, "fat": 3, "carbs": 12 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of hot chocolate" }],
+    "default_serving": "100g"
+  },
+  "iced tea": {
+    "nutrition_per_100g": { "calories": 30, "protein": 0, "fat": 0, "carbs": 8 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup iced tea (240 ml, sweetened)" }, { "unit": "ml", "grams": 1, "description": "1 ml iced tea" }],
+    "default_serving": "cup"
+  },
+  "kombucha": {
+    "nutrition_per_100g": { "calories": 12, "protein": 0, "fat": 0, "carbs": 3 },
+    "servings": [{ "unit": "100g", "grams": 100, "description": "Per 100 grams of kombucha" }],
+    "default_serving": "100g"
+  },
+  "coconut milk": {
+    "nutrition_per_100g": { "calories": 230, "protein": 2.3, "fat": 24, "carbs": 6 },
+    "servings": [{ "unit": "cup", "grams": 240, "description": "1 cup coconut milk (240 ml)" }, { "unit": "ml", "grams": 1, "description": "1 ml coconut milk" }],
+    "default_serving": "cup"
+  }
+}

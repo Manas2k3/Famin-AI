@@ -193,7 +193,7 @@ Hard rules:
 - All 7 must be mutually different.
 - Avoid any title in this previousTitles list: $prior
 - Cover these 7 categories (exactly once each): 
-  ["Hygiene","Products","Hydration","Diet","Movement","Sleep & Relax","Cramps & Comfort"]
+  ["Hydration","Diet","Hygiene","Products","Movement","Sleep & Relax","Cramps & Comfort"]
 - Tone: supportive, non-judgmental, no medical diagnosis/claims.
 - Keep inclusive; avoid gendered assumptions.
 - Keep tips general/safe (no medication advice).
@@ -317,10 +317,10 @@ Nonce: $nonce
 
     // Ensure category coverage (one per required category), then fill rest randomly.
     const desiredCategories = [
-      'Hygiene',
-      'Products',
       'Hydration',
       'Diet',
+      'Hygiene',
+      'Products',
       'Movement',
       'Sleep & Relax',
       'Cramps & Comfort',
@@ -372,6 +372,40 @@ Nonce: $nonce
   }
 
   List<Map<String, dynamic>> _localTipPool() => [
+    // Hydration
+    {
+      'title': 'Hydration Habit',
+      'subtitle': 'Aim ~8–10 glasses/day; sip regularly 💧',
+      'category': 'Hydration',
+      'icon': '💧'
+    },
+    {
+      'title': 'Electrolyte Boost',
+      'subtitle': 'Add a pinch of salts/coconut water on sweaty days.',
+      'category': 'Hydration',
+      'icon': '🥥'
+    },
+
+    // Diet
+    {
+      'title': 'Iron + C Combo',
+      'subtitle': 'Pair beans/spinach with citrus to aid iron use.',
+      'category': 'Diet',
+      'icon': '🥗'
+    },
+    {
+      'title': 'Slow Carbs',
+      'subtitle': 'Whole grains steady energy through the day.',
+      'category': 'Diet',
+      'icon': '🍞'
+    },
+    {
+      'title': 'Go Easy on Salt',
+      'subtitle': 'Less salt can help with bloating.',
+      'category': 'Diet',
+      'icon': '🧂'
+    },
+
     // Hygiene
     {
       'title': 'Change On Time',
@@ -410,40 +444,6 @@ Nonce: $nonce
       'subtitle': 'New product? Test briefly to avoid irritation.',
       'category': 'Products',
       'icon': '🧪'
-    },
-
-    // Hydration
-    {
-      'title': 'Hydration Habit',
-      'subtitle': 'Aim ~8–10 glasses/day; sip regularly 💧',
-      'category': 'Hydration',
-      'icon': '💧'
-    },
-    {
-      'title': 'Electrolyte Boost',
-      'subtitle': 'Add a pinch of salts/coconut water on sweaty days.',
-      'category': 'Hydration',
-      'icon': '🥥'
-    },
-
-    // Diet
-    {
-      'title': 'Iron + C Combo',
-      'subtitle': 'Pair beans/spinach with citrus to aid iron use.',
-      'category': 'Diet',
-      'icon': '🥗'
-    },
-    {
-      'title': 'Slow Carbs',
-      'subtitle': 'Whole grains steady energy through the day.',
-      'category': 'Diet',
-      'icon': '🍞'
-    },
-    {
-      'title': 'Go Easy on Salt',
-      'subtitle': 'Less salt can help with bloating.',
-      'category': 'Diet',
-      'icon': '🧂'
     },
 
     // Movement

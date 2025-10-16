@@ -1,3 +1,4 @@
+// lib/modules/home/widgets/calorie_track/calorie_tracker_screen.dart
 import 'dart:developer' as dev;
 
 import 'package:famina/utils/string_title_case.dart';
@@ -17,11 +18,13 @@ class CalorieTrackerScreen extends StatefulWidget {
 }
 
 class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
+  // default ctor now sets up API+assets in your repo
   final NutritionRepository _repository = NutritionRepository();
+
   DateTime _selectedDate = DateTime.now();
   DailyNutritionSummary? _summary;
   bool _isLoading = true;
-  int _streakDays = 1;
+  int _streakDays = 1; // (reserved for future streak feature)
   List<DateTime> _weekDates = [];
   Stream<List<MealEntry>>? _mealEntriesStream;
 
@@ -77,15 +80,17 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
     await showDialog(
       context: context,
       builder: (context) => AddMealDialog(
+        repo: _repository,
+        initialMealType: MealType.breakfast,
         onMealAdded: (mealType, foods) async {
           final userId = FirebaseAuth.instance.currentUser?.uid;
           if (userId == null) return;
 
           try {
-            await _repository.addMealEntry(
+            await _repository.addMealEntryExact(
               userId: userId,
               mealType: mealType,
-              foods: foods,
+              items: foods, // foods is already List<PendingMealItemDTO>
             );
             await _loadData();
             if (!mounted) return;
@@ -115,7 +120,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
     _setupMealStream();
   }
 
-  // ====== NEW: delete helpers ======
+  // ====== delete helpers ======
   Future<bool> _confirmAndDeleteMeal(MealEntry meal) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -138,7 +143,6 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
     if (ok != true) return false;
 
     try {
-      // assumes your MealEntry has an `id` field; if it's `entryId`, rename here
       await _repository.deleteMealEntry(meal.id);
       await _loadData(); // refresh header cards
       if (!mounted) return true;
@@ -163,7 +167,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
+            // ===== Header =====
             Container(
               padding: const EdgeInsets.all(20.0),
               decoration: const BoxDecoration(
@@ -209,37 +213,6 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 120),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.25),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.3),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('🔥', style: TextStyle(fontSize: 18)),
-                              const SizedBox(width: 6),
-                              Text(
-                                '$_streakDays',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -247,10 +220,9 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: _weekDates.map((date) {
-                        final isSelected =
-                            date.year == _selectedDate.year &&
-                                date.month == _selectedDate.month &&
-                                date.day == _selectedDate.day;
+                        final isSelected = date.year == _selectedDate.year &&
+                            date.month == _selectedDate.month &&
+                            date.day == _selectedDate.day;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: GestureDetector(
@@ -271,6 +243,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
 
             const SizedBox(height: 20),
 
+            // ===== Body =====
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -332,6 +305,8 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
+
+  // ===== UI pieces =====
 
   Widget _buildDayItem(String day, String date, bool isSelected) {
     return Container(
@@ -474,16 +449,12 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
     final carbsRemaining = carbsTarget - _summary!.totalCarbs;
     final fatRemaining = fatTarget - _summary!.totalFat;
 
-    final proteinProgress = (_summary!.totalProtein / proteinTarget)
-        .clamp(0.0, 1.0)
-        .toDouble();
-    final carbsProgress = (_summary!.totalCarbs / carbsTarget)
-        .clamp(0.0, 1.0)
-        .toDouble();
-    final fatProgress = (_summary!.totalFat / fatTarget)
-        .clamp(0.0, 1.0)
-        .toDouble();
-
+    final proteinProgress =
+    (_summary!.totalProtein / proteinTarget).clamp(0.0, 1.0).toDouble();
+    final carbsProgress =
+    (_summary!.totalCarbs / carbsTarget).clamp(0.0, 1.0).toDouble();
+    final fatProgress =
+    (_summary!.totalFat / fatTarget).clamp(0.0, 1.0).toDouble();
 
     final w = MediaQuery.of(context).size.width;
     final isTiny = w < 340;
@@ -574,8 +545,8 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            label, // label visual stays bold while amount says remaining
-            style: TextStyle(
+            label,
+            style: const TextStyle(
               fontSize: 13,
               color: Colors.black87,
               fontWeight: FontWeight.w600,
@@ -621,7 +592,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
             fit: BoxFit.scaleDown,
             child: TextButton.icon(
               onPressed: () {
-                // Navigate to full meal history
+                // TODO: Navigate to full meal history screen
               },
               icon: const Icon(Icons.arrow_forward,
                   size: 16, color: Color(0xFF6C5CE7)),
@@ -722,9 +693,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
 
   String _fmt(double v, {int decimals = 0}) => v.toStringAsFixed(decimals);
 
-  // ====== MEAL ITEM (with swipe + menu delete) ======
-  // Replace your _buildMealItem method with this enhanced version
-
+  // ===== MEAL ITEM (with swipe + menu delete) =====
   Widget _buildMealItem(MealEntry meal) {
     final emoji = _getMealEmoji(meal.mealType);
     final time = DateFormat('hh:mm a').format(meal.timestamp);
@@ -785,10 +754,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
                             color: Colors.black.withOpacity(0.5),
                             shape: BoxShape.circle,
                           ),
-                          child: Text(
-                            emoji,
-                            style: const TextStyle(fontSize: 20),
-                          ),
+                          child: Text(emoji, style: const TextStyle(fontSize: 20)),
                         ),
                       ),
                     ],
@@ -817,11 +783,8 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
                           ),
                           PopupMenuButton<String>(
                             padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.more_vert,
-                              color: Colors.grey[600],
-                              size: 20,
-                            ),
+                            icon: Icon(Icons.more_vert,
+                                color: Colors.grey[600], size: 20),
                             tooltip: 'More options',
                             onSelected: (v) async {
                               if (v == 'delete') {
@@ -870,7 +833,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
 
             const SizedBox(height: 16),
 
-            // Foods List - Clean bullet point style
+            // Foods List - bullet style
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -946,8 +909,6 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
 
             const SizedBox(height: 14),
 
-
-
             // Calories and Macros Row
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -989,39 +950,6 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
     );
   }
 
-// Enhanced nutrient tag with better sizing
-  Widget _buildNutrientTag(String emoji, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 13)),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              value,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: color.darken(0.2),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-// Helper extension to darken colors
   Widget _buildCompactMacro(String emoji, String value) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1065,28 +993,14 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
         return '🍗';
     }
   }
-
-  List<Color> _getMealGradient(MealType mealType) {
-    switch (mealType) {
-      case MealType.breakfast:
-        return [const Color(0xFFFECA57), const Color(0xFFFF8E53)];
-      case MealType.quickSnack:
-        return [const Color(0xFF48DBfB), const Color(0xFF0FB9B1)];
-      case MealType.lunch:
-        return [const Color(0xFF5F27CD), const Color(0xFF6C5CE7)];
-      case MealType.dinner:
-        return [const Color(0xFFFF6B6B), const Color(0xFFFF8E53)];
-    }
-  }
 }
 
 extension ColorExtension on Color {
   Color darken(double amount) {
     assert(amount >= 0 && amount <= 1);
     final hsl = HSLColor.fromColor(this);
-    final darkened = hsl.withLightness(
-      (hsl.lightness - amount).clamp(0.0, 1.0),
-    );
+    final darkened =
+    hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
     return darkened.toColor();
   }
 }
