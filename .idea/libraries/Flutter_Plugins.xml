@@ -58,6 +58,7 @@
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences-2.5.3" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/share_plus-11.1.0" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/file_selector_linux-0.9.3+2" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/audio_streamer-4.3.0" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/url_launcher_ios-6.3.4" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/speech_to_text_windows-1.0.0+beta.8" />
@@ -74,6 +75,7 @@
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/flutter_local_notifications-19.5.0" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/firebase_auth-6.1.0" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/image_picker_ios-0.8.13" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/flutter_timezone-5.0.0" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

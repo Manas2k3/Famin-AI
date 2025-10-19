@@ -61,6 +61,11 @@ class SleepSetupScreen1 extends GetView<SleepController> {
               dialBackgroundColor: SleepTheme.primaryPale,
               dialHandColor: Colors.white,
             ),
+            textButtonTheme: TextButtonThemeData(
+              style: ButtonStyle(
+                foregroundColor: WidgetStatePropertyAll(Colors.indigo),
+              ),
+            ),
           ),
           child: child!,
         );
