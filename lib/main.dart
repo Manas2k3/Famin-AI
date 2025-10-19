@@ -12,13 +12,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'data/repositories/authentication/authentication_repository.dart';
 import 'firebase_options.dart';
-import 'modules/home/widgets/profile/health_check/HealthSurveyPage.dart'; // contains initHealthFlow()
+import 'modules/home/widgets/profile/health_check/HealthSurveyPage.dart';
+import 'modules/home/widgets/sleep_track/controller/sleep_controller.dart'; // contains initHealthFlow()
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  Get.put(SleepController());
   await GetStorage.init();
 
   initHealthFlow();

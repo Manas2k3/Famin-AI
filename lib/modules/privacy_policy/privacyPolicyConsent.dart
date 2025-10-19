@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import '../../data/repositories/authentication/authentication_repository.dart';
 import '../onboarding/onboarding.dart';
 import 'PrivacyPolicyPage.dart';
@@ -19,19 +18,28 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final isTablet = size.width >= 600;
+    final double horizontal = isTablet ? 32.0 : 20.0;
+
+    // Height of the fixed bottom area (approximate, keep in sync with bottomSheet).
+    const double kButtonSheetHeight = 110;
+
     return Scaffold(
       backgroundColor: Colors.white,
+
+      // CONTENT — scrolls, with extra bottom padding so it never hides behind the sheet.
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.fromLTRB(horizontal, 20, horizontal, kButtonSheetHeight + 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-              const Text(
+              const SizedBox(height: 12),
+              Text(
                 "Privacy first",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 24),
 
@@ -39,11 +47,13 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                 value: agreePolicy,
                 text: RichText(
                   text: TextSpan(
-                    style: const TextStyle(color: Colors.black87),
+                    style: const TextStyle(color: Colors.black87, height: 1.35),
                     children: [
                       const TextSpan(text: "I agree to "),
                       WidgetSpan(
-                        child: GestureDetector(
+                        alignment: PlaceholderAlignment.baseline,
+                        baseline: TextBaseline.alphabetic,
+                        child: InkWell(
                           onTap: () => Get.to(() => PrivacyPolicyPage()),
                           child: Text(
                             "Privacy Policy",
@@ -56,8 +66,12 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                       ),
                       const TextSpan(text: " and "),
                       WidgetSpan(
-                        child: GestureDetector(
-                          onTap: () {},
+                        alignment: PlaceholderAlignment.baseline,
+                        baseline: TextBaseline.alphabetic,
+                        child: InkWell(
+                          onTap: () {
+                            // TODO: Navigate to Terms page
+                          },
                           child: Text(
                             "Terms of Use",
                             style: TextStyle(
@@ -79,14 +93,16 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                 value: agreeHealthData,
                 text: RichText(
                   text: TextSpan(
-                    style: const TextStyle(color: Colors.black87),
+                    style: const TextStyle(color: Colors.black87, height: 1.35),
                     children: [
                       const TextSpan(
                         text:
                         "I agree to processing of my personal health data for providing app functions. See more in ",
                       ),
                       WidgetSpan(
-                        child: GestureDetector(
+                        alignment: PlaceholderAlignment.baseline,
+                        baseline: TextBaseline.alphabetic,
+                        child: InkWell(
                           onTap: () => Get.to(() => PrivacyPolicyPage()),
                           child: Text(
                             "Privacy Policy",
@@ -109,54 +125,64 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                 value: agreeEmails,
                 text: const Text(
                   "I agree that the app may use my personal data (except health data) to send me product or service offerings via email.",
+                  style: TextStyle(height: 1.35),
                 ),
                 onChanged: (v) => setState(() => agreeEmails = v ?? false),
               ),
-              SizedBox(height: MediaQuery.of(context).size.height*0.42,),
+            ],
+          ),
+        ),
+      ),
 
-              // Buttons section
-              SizedBox(
-                width: double.infinity,
-                child: Column(
-                  children: [
-                    TextButton(
+      // FIXED BOTTOM — always same position across devices.
+      bottomSheet: SafeArea(
+        top: false,
+        child: Material(
+          elevation: 12,
+          color: Colors.white,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 700),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
                       onPressed: () {
                         setState(() {
-                          agreePolicy = true;
-                          agreeHealthData = true;
-                          agreeEmails = true;
+                          final all = !(agreePolicy && agreeHealthData && agreeEmails);
+                          agreePolicy = all;
+                          agreeHealthData = all;
+                          agreeEmails = all;
                         });
                       },
-                      child: const Text(
-                        "Select All",
-                        style: TextStyle(color: Colors.black),
-                      ),
+                      child: const Text("Select All", style: TextStyle(color: Colors.black)),
                     ),
-                    ElevatedButton(
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
                       onPressed: (agreePolicy && agreeHealthData)
                           ? () {
-                        AuthenticationRepository.instance
-                            .completeConsent();
+                        AuthenticationRepository.instance.completeConsent();
                         Get.to(() => const OnboardingPage());
                       }
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.pink.shade400,
                         disabledBackgroundColor: Colors.pink.shade200,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Text(
-                        "Next",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                      child: const Text("Next", style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -168,28 +194,24 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
     required Widget text,
     required ValueChanged<bool?> onChanged,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Align(
-            alignment: Alignment.topCenter,
-            child: Checkbox(
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox.adaptive(
               checkColor: Colors.white,
               value: value,
               onChanged: onChanged,
               activeColor: Colors.pink.shade400,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: text),
-        ],
+            const SizedBox(width: 8),
+            Expanded(child: text),
+          ],
+        ),
       ),
     );
   }

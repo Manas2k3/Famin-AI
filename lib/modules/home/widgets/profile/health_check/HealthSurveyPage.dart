@@ -4,6 +4,9 @@
 // (same as your original)
 // ----------------------------------------------------------
 
+import 'dart:async';
+import 'dart:math';
+
 import 'package:famina/navigation_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -183,6 +186,8 @@ Example Output:
 // Controller
 // ===============================
 class HealthCheckController extends GetxController {
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
+  DateTime? _lastPrefillAt;
   final HealthApiService api;
   final GeminiService gemini;
   HealthCheckController({required this.api, required this.gemini});
@@ -235,22 +240,30 @@ class HealthCheckController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _prefillFromFirestore();
+
+    // 1) Start listening to auth changes — reattach user doc listener on login switch.
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      _attachUserDocListener();
+    });
+
+    // 2) Also do an immediate fetch so first paint shows values ASAP.
+    refreshProfile(); // public method; see below
   }
 
-  Future<void> _prefillFromFirestore() async {
+
+
+  // Public: call this to force a Firestore fetch now (used on page-enter & pull-to-refresh)
+  Future<void> refreshProfile() async {
     isPrefilling.value = true;
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
-      // Assuming collection is "Users" and doc id == uid
       final doc = await FirebaseFirestore.instance.collection('Users').doc(uid).get();
       if (!doc.exists) return;
-
       final data = doc.data() ?? {};
 
-      // Age (direct or string)
+      // Age
       final num? ageNum = data['age'] is num ? data['age'] as num : null;
       if (ageNum != null) {
         age.value = ageNum.toInt();
@@ -259,7 +272,7 @@ class HealthCheckController extends GetxController {
         if (n != null) age.value = n;
       }
 
-      // BMI from metric (preferred), else imperial
+      // BMI (metric preferred; fallback imperial)
       double? calcBMI;
       final num? weightKg = data['weight_kg'] is num ? data['weight_kg'] as num : null;
       final num? heightCm = data['height_cm'] is num ? data['height_cm'] as num : null;
@@ -276,13 +289,68 @@ class HealthCheckController extends GetxController {
       if (calcBMI != null && calcBMI.isFinite) {
         bmi.value = double.parse(calcBMI.toStringAsFixed(1));
       }
+
+      _lastPrefillAt = DateTime.now();
     } catch (e) {
       // ignore: avoid_print
-      print('Prefill failed: $e');
+      print('refreshProfile failed: $e');
     } finally {
       isPrefilling.value = false;
     }
   }
+
+
+  // Attaches a realtime listener so Age/BMI update if the user doc changes while page is open.
+  void _attachUserDocListener() {
+    _userDocSub?.cancel(); // clean any previous
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    _userDocSub = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(uid)
+        .snapshots()
+        .listen((snap) {
+      if (!snap.exists) return;
+      final data = snap.data() ?? {};
+
+      // age
+      final num? ageNum = data['age'] is num ? data['age'] as num : null;
+      if (ageNum != null) {
+        age.value = ageNum.toInt();
+      } else if (data['age'] is String) {
+        final n = int.tryParse(data['age']);
+        if (n != null) age.value = n;
+      }
+
+      // bmi
+      double? calcBMI;
+      final num? weightKg = data['weight_kg'] is num ? data['weight_kg'] as num : null;
+      final num? heightCm = data['height_cm'] is num ? data['height_cm'] as num : null;
+      if (weightKg != null && heightCm != null && heightCm > 0) {
+        final hM = heightCm / 100.0;
+        calcBMI = (weightKg / (hM * hM)).toDouble();
+      } else {
+        final num? weightLb = data['weight_lb'] is num ? data['weight_lb'] as num : null;
+        final num? heightIn = data['height_in'] is num ? data['height_in'] as num : null;
+        if (weightLb != null && heightIn != null && heightIn > 0) {
+          calcBMI = (703.0 * weightLb / (heightIn * heightIn)).toDouble();
+        }
+      }
+      if (calcBMI != null && calcBMI.isFinite) {
+        bmi.value = double.parse(calcBMI.toStringAsFixed(1));
+      }
+
+      isPrefilling.value = false; // any live update means we’re done “loading”
+    });
+  }
+
+  @override
+  void onClose() {
+    _userDocSub?.cancel();
+    super.onClose();
+  }
+
 
   // --- Duplicate-question mapping (for clarity/documentation) ---
   static const Map<String, List<String>> questionMapping = {
@@ -601,16 +669,24 @@ class HealthCheckController extends GetxController {
 
 
   Future<void> _saveToFirestore(Map<String, dynamic> apiRes, String recommendation) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
-    final col = FirebaseFirestore.instance.collection('Health Check');
-    await col.add({
-      'uid': uid,
-      'createdAt': FieldValue.serverTimestamp(),
-      'input': buildPayload(),
-      'apiResponse': apiRes,
-      'recommendation': recommendation,
-    });
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+      final col = FirebaseFirestore.instance.collection('Health Check');
+      final input = buildPayload(); // may throw if age/bmi missing
+      await col.add({
+        'uid': uid,
+        'createdAt': FieldValue.serverTimestamp(),
+        'input': input,
+        'apiResponse': apiRes,
+        'recommendation': recommendation,
+      });
+    } catch (e) {
+      // log, but don’t crash the flow
+      // ignore: avoid_print
+      log('Save failed: $e' as num);
+    }
   }
+
 }
 
 // ===============================
@@ -703,8 +779,25 @@ class _ShimmerBoxState extends State<ShimmerBox> with SingleTickerProviderStateM
 // ===============================
 // UI: Survey Page (flat list, no headers; asks each question once)
 // ===============================
-class HealthSurveyPage extends StatelessWidget {
-  HealthSurveyPage({super.key});
+class HealthSurveyPage extends StatefulWidget {
+  const HealthSurveyPage({super.key});
+
+  @override
+  State<HealthSurveyPage> createState() => _HealthSurveyPageState();
+}
+
+class _HealthSurveyPageState extends State<HealthSurveyPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() async {
+      c.isPrefilling.value = true;
+      await c.refreshProfile();
+    });
+  }
+
+
+
   final c = Get.find<HealthCheckController>();
 
   Widget _chipRow(String label, List<String> options, RxString sel) => Column(
@@ -759,9 +852,9 @@ class HealthSurveyPage extends StatelessWidget {
 
   String _formatBmiForDisplay(double? v) {
     if (v == null) return '-';
-    final s = v.toStringAsFixed(1);
-    return s.endsWith('.0') ? '${s.substring(0, s.length - 1)}.' : s;
+    return v.toStringAsFixed(1);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -770,134 +863,140 @@ class HealthSurveyPage extends StatelessWidget {
         leading: IconButton(onPressed: () => Get.offAll(NavigationMenu()), icon: const Icon(Icons.arrow_back)),
         title: const Text('Quick Symptom Check'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Common stats: Age & BMI
-          Row(
-            children: [
-              Expanded(
-                child: Obx(() => _statPill(
-                  label: 'Age',
-                  value: c.age.value?.toString(),
-                  loading: c.age.value == null && c.isPrefilling.value,
-                )),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Obx(() => _statPill(
-                  label: 'BMI',
-                  value: _formatBmiForDisplay(c.bmi.value),
-                  loading: c.bmi.value == null && c.isPrefilling.value,
-                )),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // ——— PCOS Model ———
-          Row(
-            children: [
-              const Text('Cycles Regular?'),
-              const SizedBox(width: 8),
-              Obx(() => Switch(value: c.cycleRegular.value, onChanged: (v) => c.cycleRegular.value = v)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text('Flow volume'),
-          Obx(
-                () => DropdownButton<String>(
-              value: c.flow.value,
-              items: const [
-                DropdownMenuItem(value: 'Light', child: Text('Light')),
-                DropdownMenuItem(value: 'Normal', child: Text('Normal')),
-                DropdownMenuItem(value: 'Heavy', child: Text('Heavy')),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          c.isPrefilling.value = true;
+          await c.refreshProfile();
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Common stats: Age & BMI
+            Row(
+              children: [
+                Expanded(
+                  child: Obx(() => _statPill(
+                    label: 'Age',
+                    value: c.age.value?.toString(),
+                    loading: c.age.value == null && c.isPrefilling.value,
+                  )),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Obx(() => _statPill(
+                    label: 'BMI',
+                    value: _formatBmiForDisplay(c.bmi.value),
+                    loading: c.bmi.value == null && c.isPrefilling.value,
+                  )),
+                ),
               ],
-              onChanged: (v) {
-                if (v != null) c.flow.value = v;
-              },
             ),
-          ),
+            const SizedBox(height: 12),
 
-          // ——— PCOS Model ———
-          _boolRow('Do you have excessive hair growth on face, chin, or chest?', c.hairGrowthYes),
-          _boolRow('Do you have acne or skin darkening?', c.acneSkinYes),
-          _boolRow('Have you experienced recent weight gain?', c.weightGainYes),
-          _boolRow('Do you often crave sugar?', c.sugarCravingsYes),
-          // _boolRow('Do you find it difficult to lose weight?', c.weightLossDifficultyYes),
-          _boolRow('Do you feel hungry even after a meal?', c.hungerAfterEatingYes),
+            // ——— PCOS Model ———
+            Row(
+              children: [
+                const Text('Cycles Regular?'),
+                const SizedBox(width: 8),
+                Obx(() => Switch(value: c.cycleRegular.value, onChanged: (v) => c.cycleRegular.value = v)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text('Flow volume'),
+            Obx(
+                  () => DropdownButton<String>(
+                value: c.flow.value,
+                items: const [
+                  DropdownMenuItem(value: 'Light', child: Text('Light')),
+                  DropdownMenuItem(value: 'Normal', child: Text('Normal')),
+                  DropdownMenuItem(value: 'Heavy', child: Text('Heavy')),
+                ],
+                onChanged: (v) {
+                  if (v != null) c.flow.value = v;
+                },
+              ),
+            ),
 
-          // ——— Anemia Model ———
-          _boolRow('Do you have brittle nails or hair loss?', c.nailsHairYes),
-          _boolRow('Do you crave ice or non-food items?', c.iceCravingsYes),
-          _boolRow('Do you feel tired even after rest?', c.tiredAfterRestYes),
+            // ——— PCOS Model ———
+            _boolRow('Do you have excessive hair growth on face, chin, or chest?', c.hairGrowthYes),
+            _boolRow('Do you have acne or skin darkening?', c.acneSkinYes),
+            _boolRow('Have you experienced recent weight gain?', c.weightGainYes),
+            _boolRow('Do you often crave sugar?', c.sugarCravingsYes),
+            // _boolRow('Do you find it difficult to lose weight?', c.weightLossDifficultyYes),
+            _boolRow('Do you feel hungry even after a meal?', c.hungerAfterEatingYes),
 
-          // NOTE: Cold intolerance is asked once (here) and reused by Thyroid-Hypo scoring too.
-          _boolRow('Do you feel unusually cold (cold intolerance)?', c.coldIntoleranceYes),
+            // ——— Anemia Model ———
+            _boolRow('Do you have brittle nails or hair loss?', c.nailsHairYes),
+            _boolRow('Do you crave ice or non-food items?', c.iceCravingsYes),
+            _boolRow('Do you feel tired even after rest?', c.tiredAfterRestYes),
 
-          // ——— Thyroid Model ———
-          _boolRow('Do you feel heat intolerance?', c.heatIntoleranceYes),
-          _boolRow('Do you experience constipation?', c.constipationYes),
-          _boolRow('Do you have dry skin?', c.drySkinYes), // contributes to constipation rule
-          _boolRow('Do you experience regular anxiety?', c.regularAnxietyYes),
-          _boolRow('Do you usually sleep less than 6 hours?', c.sleepLessThan6),
-          _boolRow('Do you have puffy eyes or swelling around your face?', c.puffyEyesYes),
+            // NOTE: Cold intolerance is asked once (here) and reused by Thyroid-Hypo scoring too.
+            _boolRow('Do you feel unusually cold (cold intolerance)?', c.coldIntoleranceYes),
 
-          // ——— Endometriosis Model ———
-          Obx(() {
-            final a = c.age.value;
-            if (a != null && a > 20) {
-              return _boolRow('Infertility (Optional to answer)', c.infertilityYes);
-            }
-            return const SizedBox.shrink();
-          }),
-          // _chipRow('How often do you feel fatigued, dizzy, or weak?', ['Never', 'Sometimes', 'Often'], c.fatigueDizzyWeak),
-          _chipRow('How often do you experience pelvic pain during periods?', ['Never', 'Mild', 'Moderate', 'Severe'], c.cramps),
-          _chipRow('Do you experience pain during bowel movements?', ['Never', 'Occasionally', 'Frequently'], c.dyspareuniaBowelPain),
-          _chipRow('How often do you feel bloating or discomfort around your period?', ['Never', 'Sometimes', 'Often'], c.periodBloating),
+            // ——— Thyroid Model ———
+            _boolRow('Do you feel heat intolerance?', c.heatIntoleranceYes),
+            _boolRow('Do you experience constipation?', c.constipationYes),
+            _boolRow('Do you have dry skin?', c.drySkinYes), // contributes to constipation rule
+            _boolRow('Do you experience regular anxiety?', c.regularAnxietyYes),
+            _boolRow('Do you usually sleep less than 6 hours?', c.sleepLessThan6),
+            _boolRow('Do you have puffy eyes or swelling around your face?', c.puffyEyesYes),
 
-          // intercourse question appears for age above 20
-          Obx(() {
-            final a = c.age.value;
-            if (a != null && a > 20) {
-              return _chipRow('Do you experience pain during intercourse? (Optional to answer)',
-                  ['Never', 'Occasionally', 'Frequently'], c.interCoursePain);
-            }
-            return const SizedBox.shrink();
-          }),
-
-          const SizedBox(height: 16),
-          Obx(() {
-            final ready = !c.isPrefilling.value && c.age.value != null && c.bmi.value != null;
-            return ElevatedButton.icon(
-              icon: const Icon(Icons.health_and_safety),
-              label: const Text('Get My Health Snapshot'),
-              onPressed: ready
-                  ? () async {
-                FocusScope.of(context).unfocus();
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const Center(child: CircularProgressIndicator()),
-                );
-                try {
-                  final res = await c.submitAndGetResults();
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    Get.to(() => HealthResultPage(result: res));
-                  }
-                } catch (e) {
-                  if (context.mounted) Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
-                  // ignore: avoid_print
-                  print(e);
-                }
+            // ——— Endometriosis Model ———
+            Obx(() {
+              final a = c.age.value;
+              if (a != null && a > 20) {
+                return _boolRow('Infertility (Optional to answer)', c.infertilityYes);
               }
-                  : null,
-            );
-          }),
-          const SizedBox(height: 24),
-        ],
+              return const SizedBox.shrink();
+            }),
+            // _chipRow('How often do you feel fatigued, dizzy, or weak?', ['Never', 'Sometimes', 'Often'], c.fatigueDizzyWeak),
+            _chipRow('How often do you experience pelvic pain during periods?', ['Never', 'Mild', 'Moderate', 'Severe'], c.cramps),
+            _chipRow('Do you experience pain during bowel movements?', ['Never', 'Occasionally', 'Frequently'], c.dyspareuniaBowelPain),
+            _chipRow('How often do you feel bloating or discomfort around your period?', ['Never', 'Sometimes', 'Often'], c.periodBloating),
+
+            // intercourse question appears for age above 20
+            Obx(() {
+              final a = c.age.value;
+              if (a != null && a > 20) {
+                return _chipRow('Do you experience pain during intercourse? (Optional to answer)',
+                    ['Never', 'Occasionally', 'Frequently'], c.interCoursePain);
+              }
+              return const SizedBox.shrink();
+            }),
+
+            const SizedBox(height: 16),
+            Obx(() {
+              final ready = !c.isPrefilling.value && c.age.value != null && c.bmi.value != null;
+              return ElevatedButton.icon(
+                icon: const Icon(Icons.health_and_safety),
+                label: const Text('Get My Health Snapshot'),
+                onPressed: ready
+                    ? () async {
+                  FocusScope.of(context).unfocus();
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(child: CircularProgressIndicator()),
+                  );
+                  try {
+                    final res = await c.submitAndGetResults();
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                      Get.to(() => HealthResultPage(result: res));
+                    }
+                  } catch (e) {
+                    if (context.mounted) Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                    // ignore: avoid_print
+                    print(e);
+                  }
+                }
+                    : null,
+              );
+            }),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }

@@ -14,6 +14,8 @@ import '../widgets/profile/full_screen_chat_page.dart';
 import '../widgets/profile/health_check/HealthSurveyPage.dart';
 import '../widgets/profile/period_dates/full_screen_calendar_picket.dart';
 import '../widgets/profile/profile_page.dart';
+import '../widgets/sleep_track/controller/sleep_controller.dart';
+import '../widgets/sleep_track/screens/sleep_setup_screen_1.dart';
 
 class HomePage extends StatelessWidget {
   HomePage({Key? key}) : super(key: key);
@@ -657,19 +659,67 @@ class HomePage extends StatelessWidget {
   Widget _tipsShimmer() {
     return ListView.builder(
       scrollDirection: Axis.horizontal,
-      itemCount: 3,
+      itemCount: 3, // show 3 loading cards
       itemBuilder: (ctx, idx) {
         return Container(
           width: 300,
           margin: EdgeInsets.only(left: idx == 0 ? 16 : 8, right: 16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.grey.shade200,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // top row: icon circle + category pill placeholder
+              Row(
+                children: [
+                  // icon circle
+                  ClipOval(
+                    child: _ShimmerBoxLite(width: 28, height: 28, radius: 14),
+                  ),
+                  const SizedBox(width: 12),
+                  // category pill
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _ShimmerBoxLite(width: 80, height: 18, radius: 20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const Spacer(),
+
+              // title line
+              _ShimmerBoxLite(width: 200, height: 16, radius: 6),
+              const SizedBox(height: 8),
+
+              // subtitle lines
+              _ShimmerBoxLite(width: 240, height: 12, radius: 6),
+              const SizedBox(height: 6),
+              _ShimmerBoxLite(width: 160, height: 12, radius: 6),
+            ],
           ),
         );
       },
     );
   }
+
 
   // ==================== HEALTH CHECK SECTION (from old code, enhanced) ====================
   Widget _latestHealthCheckSection(HomeController c) {
@@ -1409,28 +1459,35 @@ class HomePage extends StatelessWidget {
     } else if (categoryLower.contains('diet') ||
         titleLower.contains('calorie') ||
         titleLower.contains('iron')) {
-      Get.snackbar(
-        'Nutrition Tracking',
-        'Opening calorie & nutrition tracker...',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-        backgroundColor: const Color(0xFFFFF6E7),
-        colorText: Colors.black87,
-      );
+      // Get.snackbar(
+      //   'Nutrition Tracking',
+      //   'Opening calorie & nutrition tracker...',
+      //   snackPosition: SnackPosition.BOTTOM,
+      //   duration: const Duration(seconds: 2),
+      //   backgroundColor: const Color(0xFFFFF6E7),
+      //   colorText: Colors.black87,
+      // );
       Get.to(() => CalorieTrackerScreen());
-    } else if (categoryLower.contains('sleep') ||
+    }else if (categoryLower.contains('sleep') ||
         titleLower.contains('sleep') ||
         titleLower.contains('wind-down')) {
-      Get.snackbar(
-        'Sleep Monitoring',
-        'Opening sleep tracker...',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-        backgroundColor: const Color(0xFFF3EBFF),
-        colorText: Colors.black87,
-      );
-      // Get.to(() => SleepMonitoringPage());
-    } else if (categoryLower.contains('movement') ||
+      // Get.snackbar(
+      //   'Sleep Monitoring',
+      //   'Opening sleep tracker...',
+      //   snackPosition: SnackPosition.BOTTOM,
+      //   duration: const Duration(seconds: 2),
+      //   backgroundColor: const Color(0xFFF3EBFF),
+      //   colorText: Colors.black87,
+      // );
+
+      final ctrl = Get.isRegistered<SleepController>()
+          ? Get.find<SleepController>()
+          : Get.put(SleepController(), permanent: true);
+
+      ctrl.openSleepFeature();
+
+    }
+     else if (categoryLower.contains('movement') ||
         titleLower.contains('walk') ||
         titleLower.contains('stretch')) {
       Get.snackbar(
@@ -1513,6 +1570,61 @@ class _Shimmer extends StatefulWidget {
   @override
   State<_Shimmer> createState() => _ShimmerState();
 }
+
+/// Reusable shimmer rectangle for skeleton pieces
+class _ShimmerBoxLite extends StatefulWidget {
+  final double width;
+  final double height;
+  final double radius;
+  const _ShimmerBoxLite({
+    Key? key,
+    required this.width,
+    required this.height,
+    this.radius = 8,
+  }) : super(key: key);
+
+  @override
+  State<_ShimmerBoxLite> createState() => _ShimmerBoxLiteState();
+}
+
+class _ShimmerBoxLiteState extends State<_ShimmerBoxLite>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ac =
+  AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..repeat();
+
+  @override
+  void dispose() {
+    _ac.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ac,
+      builder: (_, __) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            gradient: LinearGradient(
+              begin: Alignment(-1 + 2 * _ac.value, 0),
+              end: Alignment(1 + 2 * _ac.value, 0),
+              colors: [
+                Colors.grey.shade200,
+                Colors.grey.shade300,
+                Colors.grey.shade200,
+              ],
+              stops: const [0.2, 0.5, 0.8],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 
 class _ShimmerState extends State<_Shimmer>
     with SingleTickerProviderStateMixin {

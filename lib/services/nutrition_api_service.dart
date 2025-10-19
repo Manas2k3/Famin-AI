@@ -41,7 +41,7 @@ class NutritionApiService {
     required String activity,
     String sex = 'female',
   }) async {
-    // Mifflin–St Jeor BMR
+    //BMR
     final bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + (sex.toLowerCase() == 'male' ? 5 : -161);
 
     // Activity factors

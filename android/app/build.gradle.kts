@@ -14,6 +14,9 @@ android {
     ndkVersion = "27.0.12077973"
 
     compileOptions {
+        // ✅ desugaring ON
+        isCoreLibraryDesugaringEnabled = true
+        // You’re currently on Java 11; that’s fine if your AGP/JDK setup matches
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -23,10 +26,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.famina"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = 35
         versionCode = flutter.versionCode
@@ -35,8 +35,6 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -44,4 +42,10 @@ android {
 
 flutter {
     source = "../.."
+}
+
+// 👇 ADD THIS BLOCK
+dependencies {
+    // Required when isCoreLibraryDesugaringEnabled = true
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

@@ -302,7 +302,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -341,9 +341,16 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
   }
 
   Widget _buildCaloriesCard() {
-    final remaining = _summary!.recommendedCalories - _summary!.totalCalories;
-    final consumed = _summary!.totalCalories;
     final target = _summary!.recommendedCalories;
+    final consumed = _summary!.totalCalories;
+    final remaining = target - consumed; // can be negative
+
+    final isOver = remaining < 0;
+    final headlineNumber = (isOver ? remaining.abs() : remaining).toStringAsFixed(0);
+    final headlineSublabel = isOver ? 'over today' : 'left today';
+    final chipText = isOver
+        ? '${consumed.toStringAsFixed(0)} / ${target.toStringAsFixed(0)}  (over by ${headlineNumber})'
+        : '${consumed.toStringAsFixed(0)} / ${target.toStringAsFixed(0)} consumed';
 
     return Container(
       width: double.infinity,
@@ -374,7 +381,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      remaining.toStringAsFixed(0),
+                      headlineNumber,
                       style: const TextStyle(
                         fontSize: 56,
                         fontWeight: FontWeight.bold,
@@ -396,9 +403,9 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Remaining today',
-                  style: TextStyle(
+                Text(
+                  headlineSublabel,
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Colors.white,
                     fontWeight: FontWeight.w500,
@@ -406,14 +413,13 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
                 ),
                 const SizedBox(height: 16),
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.25),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${consumed.toStringAsFixed(0)} of ${target.toStringAsFixed(0)} consumed',
+                    chipText,
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.white,
@@ -431,65 +437,58 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
               color: Colors.white.withOpacity(0.25),
               shape: BoxShape.circle,
             ),
-            child: const Center(
-              child: Text('🔥', style: TextStyle(fontSize: 48)),
-            ),
+            child: const Center(child: Text('🔥', style: TextStyle(fontSize: 48))),
           ),
         ],
       ),
     );
   }
 
+
   Widget _buildMacrosRow() {
     final proteinTarget = _summary!.recommendedCalories * 0.3 / 4;
-    final carbsTarget = _summary!.recommendedCalories * 0.4 / 4;
-    final fatTarget = _summary!.recommendedCalories * 0.3 / 9;
+    final carbsTarget   = _summary!.recommendedCalories * 0.4 / 4;
+    final fatTarget     = _summary!.recommendedCalories * 0.3 / 9;
 
-    final proteinRemaining = proteinTarget - _summary!.totalProtein;
-    final carbsRemaining = carbsTarget - _summary!.totalCarbs;
-    final fatRemaining = fatTarget - _summary!.totalFat;
+    double clamp01(double v) => v.isNaN ? 0 : v.clamp(0.0, 1.0).toDouble();
 
-    final proteinProgress =
-    (_summary!.totalProtein / proteinTarget).clamp(0.0, 1.0).toDouble();
-    final carbsProgress =
-    (_summary!.totalCarbs / carbsTarget).clamp(0.0, 1.0).toDouble();
-    final fatProgress =
-    (_summary!.totalFat / fatTarget).clamp(0.0, 1.0).toDouble();
+    final pRemain = proteinTarget - _summary!.totalProtein;
+    final cRemain = carbsTarget   - _summary!.totalCarbs;
+    final fRemain = fatTarget     - _summary!.totalFat;
 
     final w = MediaQuery.of(context).size.width;
     final isTiny = w < 340;
 
     final cards = [
       _buildMacroCard(
-        '${proteinRemaining.toStringAsFixed(0)}g',
-        'Protein',
-        'remaining',
-        proteinProgress,
-        const Color(0xFFFF6B6B),
-        '🥩',
+        amount: '${pRemain.abs().toStringAsFixed(0)}g',
+        label: 'Protein',
+        isOver: pRemain < 0,
+        progress: clamp01(_summary!.totalProtein / proteinTarget),
+        color: const Color(0xFFFF6B6B),
+        emoji: '🥩',
       ),
       _buildMacroCard(
-        '${carbsRemaining.toStringAsFixed(0)}g',
-        'Carbs',
-        'remaining',
-        carbsProgress,
-        const Color(0xFFFECA57),
-        '🍞',
+        amount: '${cRemain.abs().toStringAsFixed(0)}g',
+        label: 'Carbs',
+        isOver: cRemain < 0,
+        progress: clamp01(_summary!.totalCarbs / carbsTarget),
+        color: const Color(0xFFFECA57),
+        emoji: '🍞',
       ),
       _buildMacroCard(
-        '${fatRemaining.toStringAsFixed(0)}g',
-        'Fat',
-        'remaining',
-        fatProgress,
-        const Color(0xFF48DBfB),
-        '🧈',
+        amount: '${fRemain.abs().toStringAsFixed(0)}g',
+        label: 'Fat',
+        isOver: fRemain < 0,
+        progress: clamp01(_summary!.totalFat / fatTarget),
+        color: const Color(0xFF48DBfB),
+        emoji: '🧈',
       ),
     ];
 
     if (isTiny) {
       return Wrap(
-        spacing: 12,
-        runSpacing: 12,
+        spacing: 12, runSpacing: 12,
         children: [
           SizedBox(width: (w - 20 - 12) / 2, child: cards[0]),
           SizedBox(width: (w - 20 - 12) / 2, child: cards[1]),
@@ -509,14 +508,18 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
     );
   }
 
-  Widget _buildMacroCard(
-      String amount,
-      String label,
-      String subtitle,
-      double progress,
-      Color color,
-      String emoji,
-      ) {
+
+  Widget _buildMacroCard({
+    required String amount,
+    required String label,
+    required bool isOver,
+    required double progress,
+    required Color color,
+    required String emoji,
+  }) {
+    final status = isOver ? 'over by' : 'remaining';
+    final statusColor = isOver ? Colors.redAccent : Colors.black45;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -537,30 +540,16 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
           const SizedBox(height: 8),
           Text(
             amount,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.black87,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 11, color: Colors.black45),
-          ),
+          Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF2D2A43), fontWeight: FontWeight.w600)),
+          Text(status, style: TextStyle(fontSize: 11, color: statusColor)),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
-              value: progress,
+              value: progress.clamp(0.0, 1.0),
               minHeight: 8,
               backgroundColor: color.withOpacity(0.15),
               valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -570,6 +559,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
       ),
     );
   }
+
 
   Widget _buildRecentMealsHeader() {
     return Row(
@@ -855,16 +845,16 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF6C5CE7),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
+                        // Container(
+                        //   margin: const EdgeInsets.only(top: 4),
+                        //   width: 6,
+                        //   height: 6,
+                        //   decoration: const BoxDecoration(
+                        //     color: Color(0xFF6C5CE7),
+                        //     shape: BoxShape.circle,
+                        //   ),
+                        // ),
+                        // const SizedBox(width: 10),
                         Expanded(
                           child: RichText(
                             text: TextSpan(

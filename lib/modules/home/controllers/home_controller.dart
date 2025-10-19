@@ -193,7 +193,7 @@ Hard rules:
 - All 7 must be mutually different.
 - Avoid any title in this previousTitles list: $prior
 - Cover these 7 categories (exactly once each): 
-  ["Hydration","Diet","Hygiene","Products","Movement","Sleep & Relax","Cramps & Comfort"]
+  ["Hydration","Diet","Sleep & Relax","Hygiene","Products","Movement","Cramps & Comfort"]
 - Tone: supportive, non-judgmental, no medical diagnosis/claims.
 - Keep inclusive; avoid gendered assumptions.
 - Keep tips general/safe (no medication advice).
@@ -319,10 +319,10 @@ Nonce: $nonce
     const desiredCategories = [
       'Hydration',
       'Diet',
+      'Sleep & Relax',
       'Hygiene',
       'Products',
       'Movement',
-      'Sleep & Relax',
       'Cramps & Comfort',
       'Disposal & Environment',
       'Travel & Backup',
@@ -406,6 +406,20 @@ Nonce: $nonce
       'icon': '🧂'
     },
 
+    // Sleep & Relax
+    {
+      'title': 'Wind-Down',
+      'subtitle': 'Consistent bedtime supports energy 😴',
+      'category': 'Sleep & Relax',
+      'icon': '😴'
+    },
+    {
+      'title': 'Screen Dimmer',
+      'subtitle': 'Lower blue light 1 hr before bed.',
+      'category': 'Sleep & Relax',
+      'icon': '📵'
+    },
+
     // Hygiene
     {
       'title': 'Change On Time',
@@ -460,19 +474,6 @@ Nonce: $nonce
       'icon': '🧘'
     },
 
-    // Sleep & Relax
-    {
-      'title': 'Wind-Down',
-      'subtitle': 'Consistent bedtime supports energy 😴',
-      'category': 'Sleep & Relax',
-      'icon': '😴'
-    },
-    {
-      'title': 'Screen Dimmer',
-      'subtitle': 'Lower blue light 1 hr before bed.',
-      'category': 'Sleep & Relax',
-      'icon': '📵'
-    },
 
     // Cramps & Comfort
     {
