@@ -36,6 +36,7 @@ class SleepProfile {
   final LifestyleFactors? lifestyle;
   final TrackingSettings? trackingSettings;
   final DateTime? updatedAt;
+  final String? morningReminderHHmm;
 
   SleepProfile({
     this.setupCompleted = false,
@@ -47,6 +48,7 @@ class SleepProfile {
     this.lifestyle,
     this.trackingSettings,
     this.updatedAt,
+    this.morningReminderHHmm,
   });
 
   // Defaults by chronotype
@@ -66,6 +68,8 @@ class SleepProfile {
       'setup_completed': setupCompleted,
       'setup_completed_at': setupCompletedAt?.toIso8601String(),
       'chronotype': chronotype.value,
+      if (morningReminderHHmm != null)
+        'morning_reminder_hhmm': morningReminderHHmm,
       'target_bedtime': targetBedtime,
       'target_wake': targetWake,
       'target_duration_minutes': targetDurationMinutes,
@@ -82,6 +86,7 @@ class SleepProfile {
         targetBedtime: '23:00',
         targetWake: '07:00',
         targetDurationMinutes: 480,
+        morningReminderHHmm: map?['morning_reminder_hhmm'] as String?,
       );
     }
 

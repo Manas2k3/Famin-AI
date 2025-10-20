@@ -6,7 +6,8 @@
         android:required="false" />
 
     <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
-
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
@@ -35,6 +36,9 @@
 
     <!-- For notifications (wind-down reminders, morning check-ins) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+
 
     <application
         android:label="famina"

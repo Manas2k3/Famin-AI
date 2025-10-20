@@ -1,10 +1,10 @@
 import 'package:famina/modules/home/widgets/sleep_track/screens/sleep_setup_screen_3.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../controller/sleep_controller.dart';
 import '../models/sleep_model.dart';
 import '../theme/sleep_theme.dart';
+import '../widgets/responsive.dart';
 import '../widgets/sleep_widget.dart';
 
 class SleepSetupScreen2 extends GetView<SleepController> {
@@ -12,14 +12,17 @@ class SleepSetupScreen2 extends GetView<SleepController> {
 
   @override
   Widget build(BuildContext context) {
-    // Local state for this screen
+    final padding = ResponsiveHelper.getScreenPadding(context);
+    final spacing = ResponsiveHelper.getSpacing(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+    final maxWidth = ResponsiveHelper.getMaxWidth(context);
+
     final caffeinePerDay = 1.obs;
     final caffeineCutoff = '17:00'.obs;
     final roomTempPref = 'neutral'.obs;
     final lightSensitivity = 3.obs;
     final snoringNoticed = 'unsure'.obs;
 
-    // Load existing data if available
     final lifestyle = controller.userData.value?.sleepProfile?.lifestyle;
     if (lifestyle != null) {
       caffeinePerDay.value = lifestyle.caffeinePerDay;
@@ -47,10 +50,8 @@ class SleepSetupScreen2 extends GetView<SleepController> {
               ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.indigo, // enabled color
-                  disabledForegroundColor: Colors
-                      .indigoAccent // (optional) if you ever disable them
-                      .withOpacity(0.38),
+                  foregroundColor: Colors.indigo,
+                  disabledForegroundColor: Colors.indigoAccent.withOpacity(0.38),
                 ),
               ),
             ),
@@ -92,103 +93,102 @@ class SleepSetupScreen2 extends GetView<SleepController> {
       ),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Progress indicator
-                const SetupProgressIndicator(
-                  currentStep: 2,
-                  totalSteps: 3,
-                ),
-                const SizedBox(height: 32),
+          Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: SingleChildScrollView(
+                padding: padding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SetupProgressIndicator(
+                      currentStep: 2,
+                      totalSteps: 3,
+                    ),
+                    SizedBox(height: spacing),
 
-                // Title
-                Text(
-                  'Your daily habits',
-                  style: Theme.of(context).textTheme.displayMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Help us personalize your sleep tips',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 32),
+                    Text(
+                      'Your daily habits',
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        fontSize: isTablet ? 32 : 28,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Help us personalize your sleep tips',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    SizedBox(height: spacing),
 
-                // Section 1: Caffeine
-                const SectionHeader(
-                  title: 'Caffeine intake',
-                  subtitle: 'Coffee, tea, energy drinks, etc.',
-                ),
-                Obx(() => _CaffeineSelector(
-                  value: caffeinePerDay.value,
-                  onChanged: (val) => caffeinePerDay.value = val,
-                )),
-                const SizedBox(height: 16),
+                    const SectionHeader(
+                      title: 'Caffeine intake',
+                      subtitle: 'Coffee, tea, energy drinks, etc.',
+                    ),
+                    Obx(() => _CaffeineSelector(
+                      value: caffeinePerDay.value,
+                      onChanged: (val) => caffeinePerDay.value = val,
+                    )),
+                    const SizedBox(height: 16),
 
-                // Caffeine cutoff time
-                Obx(() => TimePickerButton(
-                  label: 'Last caffeine cutoff time',
-                  timeValue: caffeineCutoff.value,
-                  onTap: selectCaffeineCutoff,
-                )),
-                const SizedBox(height: 8),
-                Text(
-                  '💡 Tip: Caffeine stays in your system for 4-6 hours',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SleepTheme.textSecondary,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-                const SizedBox(height: 32),
+                    Obx(() => TimePickerButton(
+                      label: 'Last caffeine cutoff time',
+                      timeValue: caffeineCutoff.value,
+                      onTap: selectCaffeineCutoff,
+                    )),
+                    const SizedBox(height: 8),
+                    Text(
+                      '💡 Tip: Caffeine stays in your system for 4-6 hours',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SleepTheme.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    SizedBox(height: spacing),
 
-                // Section 2: Room Temperature
-                const SectionHeader(
-                  title: 'Room temperature preference',
-                  subtitle: 'What helps you sleep best?',
-                ),
-                Obx(() => _TemperatureSelector(
-                  value: roomTempPref.value,
-                  onChanged: (val) => roomTempPref.value = val,
-                )),
-                const SizedBox(height: 32),
+                    const SectionHeader(
+                      title: 'Room temperature preference',
+                      subtitle: 'What helps you sleep best?',
+                    ),
+                    Obx(() => _TemperatureSelector(
+                      value: roomTempPref.value,
+                      onChanged: (val) => roomTempPref.value = val,
+                    )),
+                    SizedBox(height: spacing),
 
-                // Section 3: Light Sensitivity
-                const SectionHeader(
-                  title: 'Light sensitivity',
-                  subtitle: 'How sensitive are you to light when sleeping?',
-                ),
-                Obx(() => _LightSensitivitySlider(
-                  value: lightSensitivity.value,
-                  onChanged: (val) => lightSensitivity.value = val,
-                )),
-                const SizedBox(height: 32),
+                    const SectionHeader(
+                      title: 'Light sensitivity',
+                      subtitle: 'How sensitive are you to light when sleeping?',
+                    ),
+                    Obx(() => _LightSensitivitySlider(
+                      value: lightSensitivity.value,
+                      onChanged: (val) => lightSensitivity.value = val,
+                    )),
+                    SizedBox(height: spacing),
 
-                // Section 4: Snoring
-                const SectionHeader(
-                  title: 'Snoring awareness',
-                  subtitle: 'Have you been told you snore?',
-                ),
-                Obx(() => _SnoringSelector(
-                  value: snoringNoticed.value,
-                  onChanged: (val) => snoringNoticed.value = val,
-                )),
-                const SizedBox(height: 16),
-                Text(
-                  '💡 Optional: This helps us suggest breathing exercises',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SleepTheme.textSecondary,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
+                    const SectionHeader(
+                      title: 'Snoring awareness',
+                      subtitle: 'Have you been told you snore?',
+                    ),
+                    Obx(() => _SnoringSelector(
+                      value: snoringNoticed.value,
+                      onChanged: (val) => snoringNoticed.value = val,
+                    )),
+                    const SizedBox(height: 16),
+                    Text(
+                      '💡 Optional: This helps us suggest breathing exercises',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SleepTheme.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
 
-                const SizedBox(height: 100), // Space for button
-              ],
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
             ),
           ),
 
-          // Loading overlay
           Obx(() {
             if (controller.isLoading.value) {
               return const Positioned.fill(
@@ -198,43 +198,47 @@ class SleepSetupScreen2 extends GetView<SleepController> {
             return const SizedBox.shrink();
           }),
 
-          // Bottom button
           Positioned(
             left: 0,
             right: 0,
-            bottom: -20,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: SleepTheme.surface,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Obx(() => ElevatedButton(
-                  onPressed: !controller.isLoading.value ? handleContinue : null,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(56),
-                    backgroundColor: Colors.indigo,       // 👈 button background
-                    foregroundColor: Colors.white,        // 👈 text & icon color
-                    shape: RoundedRectangleBorder(        // optional: make it pretty
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text('Continue'),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, size: 20),
+            bottom: 0,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Container(
+                  padding: padding,
+                  decoration: BoxDecoration(
+                    color: SleepTheme.surface,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
                     ],
                   ),
-                )),
+                  child: SafeArea(
+                    child: Obx(() => ElevatedButton(
+                      onPressed: !controller.isLoading.value ? handleContinue : null,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: Size.fromHeight(isTablet ? 60 : 56),
+                        backgroundColor: Colors.indigo,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Text('Continue'),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward, size: 20),
+                        ],
+                      ),
+                    )),
+                  ),
+                ),
               ),
             ),
           ),
@@ -244,7 +248,7 @@ class SleepSetupScreen2 extends GetView<SleepController> {
   }
 }
 
-// Custom widgets for Screen 2
+// Custom widgets remain mostly the same but with responsive adjustments
 
 class _CaffeineSelector extends StatelessWidget {
   final int value;
@@ -257,6 +261,7 @@ class _CaffeineSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmall = ResponsiveHelper.isSmallScreen(context);
     final options = [
       {'value': 0, 'label': 'None', 'icon': '🚫'},
       {'value': 1, 'label': '1-2 cups', 'icon': '☕'},
@@ -265,15 +270,18 @@ class _CaffeineSelector extends StatelessWidget {
     ];
 
     return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+      spacing: isSmall ? 8 : 12,
+      runSpacing: isSmall ? 8 : 12,
       children: options.map((option) {
         final isSelected = value == option['value'];
         return GestureDetector(
           onTap: () => onChanged(option['value'] as int),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmall ? 14 : 20,
+              vertical: isSmall ? 12 : 16,
+            ),
             decoration: BoxDecoration(
               color: isSelected ? SleepTheme.primaryMid : SleepTheme.surface,
               borderRadius: BorderRadius.circular(12),
@@ -286,7 +294,7 @@ class _CaffeineSelector extends StatelessWidget {
               children: [
                 Text(
                   option['icon'] as String,
-                  style: const TextStyle(fontSize: 24),
+                  style: TextStyle(fontSize: isSmall ? 20 : 24),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -294,7 +302,7 @@ class _CaffeineSelector extends StatelessWidget {
                   style: TextStyle(
                     color: isSelected ? Colors.white : SleepTheme.textPrimary,
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: isSmall ? 12 : 14,
                   ),
                 ),
               ],
@@ -317,6 +325,7 @@ class _TemperatureSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmall = ResponsiveHelper.isSmallScreen(context);
     final options = [
       {'value': 'cool', 'label': 'Cool', 'icon': '❄️', 'desc': '16-18°C'},
       {'value': 'neutral', 'label': 'Neutral', 'icon': '🌡️', 'desc': '18-20°C'},
@@ -331,7 +340,7 @@ class _TemperatureSelector extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmall ? 12 : 16),
             decoration: BoxDecoration(
               color: isSelected ? SleepTheme.primaryMid : SleepTheme.surface,
               borderRadius: BorderRadius.circular(16),
@@ -343,8 +352,8 @@ class _TemperatureSelector extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: isSmall ? 40 : 48,
+                  height: isSmall ? 40 : 48,
                   decoration: BoxDecoration(
                     color: isSelected
                         ? Colors.white.withOpacity(0.2)
@@ -354,11 +363,11 @@ class _TemperatureSelector extends StatelessWidget {
                   child: Center(
                     child: Text(
                       option['icon'] as String,
-                      style: const TextStyle(fontSize: 24),
+                      style: TextStyle(fontSize: isSmall ? 20 : 24),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: isSmall ? 12 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,7 +377,7 @@ class _TemperatureSelector extends StatelessWidget {
                         style: TextStyle(
                           color: isSelected ? Colors.white : SleepTheme.textPrimary,
                           fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                          fontSize: isSmall ? 14 : 16,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -378,14 +387,18 @@ class _TemperatureSelector extends StatelessWidget {
                           color: isSelected
                               ? Colors.white.withOpacity(0.8)
                               : SleepTheme.textSecondary,
-                          fontSize: 12,
+                          fontSize: isSmall ? 11 : 12,
                         ),
                       ),
                     ],
                   ),
                 ),
                 if (isSelected)
-                  const Icon(Icons.check_circle, color: Colors.white),
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.white,
+                    size: isSmall ? 20 : 24,
+                  ),
               ],
             ),
           ),
@@ -406,10 +419,11 @@ class _LightSensitivitySlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmall = ResponsiveHelper.isSmallScreen(context);
     final labels = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmall ? 16 : 20),
       decoration: BoxDecoration(
         color: SleepTheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -420,15 +434,19 @@ class _LightSensitivitySlider extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('🌙', style: TextStyle(fontSize: 24)),
-              Text(
-                labels[value - 1],
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: SleepTheme.primaryMid,
-                  fontWeight: FontWeight.w600,
+              Text('🌙', style: TextStyle(fontSize: isSmall ? 20 : 24)),
+              Flexible(
+                child: Text(
+                  labels[value - 1],
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: SleepTheme.primaryMid,
+                    fontWeight: FontWeight.w600,
+                    fontSize: isSmall ? 14 : 16,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-              const Text('☀️', style: TextStyle(fontSize: 24)),
+              Text('☀️', style: TextStyle(fontSize: isSmall ? 20 : 24)),
             ],
           ),
           const SizedBox(height: 16),
@@ -439,7 +457,9 @@ class _LightSensitivitySlider extends StatelessWidget {
               thumbColor: SleepTheme.primaryMid,
               overlayColor: SleepTheme.primaryMid.withOpacity(0.2),
               trackHeight: 4,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+              thumbShape: RoundSliderThumbShape(
+                enabledThumbRadius: isSmall ? 8 : 10,
+              ),
             ),
             child: Slider(
               value: value.toDouble(),
@@ -481,52 +501,103 @@ class _SnoringSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmall = ResponsiveHelper.isSmallScreen(context);
     final options = [
       {'value': 'yes', 'label': 'Yes, I snore', 'icon': '😴'},
       {'value': 'no', 'label': 'No snoring', 'icon': '😌'},
       {'value': 'unsure', 'label': 'Not sure', 'icon': '🤷'},
     ];
 
-    return Row(
-      children: options.map((option) {
-        final isSelected = value == option['value'];
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => onChanged(option['value'] as String),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                color: isSelected ? SleepTheme.primaryMid : SleepTheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected ? SleepTheme.primaryMid : SleepTheme.divider,
-                  width: isSelected ? 2 : 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Stack vertically on very small screens
+        if (constraints.maxWidth < 320) {
+          return Column(
+            children: options.map((option) {
+              final isSelected = value == option['value'];
+              return GestureDetector(
+                onTap: () => onChanged(option['value'] as String),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? SleepTheme.primaryMid : SleepTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? SleepTheme.primaryMid : SleepTheme.divider,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        option['icon'] as String,
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        option['label'] as String,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : SleepTheme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        }
+
+        // Row layout for normal screens
+        return Row(
+          children: options.map((option) {
+            final isSelected = value == option['value'];
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => onChanged(option['value'] as String),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: EdgeInsets.symmetric(vertical: isSmall ? 12 : 16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? SleepTheme.primaryMid : SleepTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? SleepTheme.primaryMid : SleepTheme.divider,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        option['icon'] as String,
+                        style: TextStyle(fontSize: isSmall ? 28 : 32),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        option['label'] as String,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : SleepTheme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: isSmall ? 11 : 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              child: Column(
-                children: [
-                  Text(
-                    option['icon'] as String,
-                    style: const TextStyle(fontSize: 32),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    option['label'] as String,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : SleepTheme.textPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 }
+

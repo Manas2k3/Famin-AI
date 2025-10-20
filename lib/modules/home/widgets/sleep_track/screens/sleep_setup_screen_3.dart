@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../controller/sleep_controller.dart';
 import '../models/sleep_model.dart';
 import '../theme/sleep_theme.dart';
+import '../widgets/responsive.dart';
 import '../widgets/sleep_widget.dart';
 
 class SleepSetupScreen3 extends GetView<SleepController> {
@@ -11,12 +12,15 @@ class SleepSetupScreen3 extends GetView<SleepController> {
 
   @override
   Widget build(BuildContext context) {
-    // Local state for this screen
+    final padding = ResponsiveHelper.getScreenPadding(context);
+    final spacing = ResponsiveHelper.getSpacing(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+    final maxWidth = ResponsiveHelper.getMaxWidth(context);
+
     final autoStartEnabled = true.obs;
     final motionDetectionEnabled = false.obs;
     final noiseDetectionEnabled = false.obs;
 
-    // Load existing data if available
     final settings = controller.userData.value?.sleepProfile?.trackingSettings;
     if (settings != null) {
       autoStartEnabled.value = settings.autoStartEnabled;
@@ -33,10 +37,7 @@ class SleepSetupScreen3 extends GetView<SleepController> {
 
       final success = await controller.saveTrackingSettings(trackingSettings);
       if (success) {
-        // Mark setup as complete
         await controller.completeSetup();
-
-        // Navigate to dashboard ✅
         Get.offAll(() => const SleepDashboardScreen());
       }
     }
@@ -54,151 +55,155 @@ class SleepSetupScreen3 extends GetView<SleepController> {
       ),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Progress indicator
-                const SetupProgressIndicator(
-                  currentStep: 3,
-                  totalSteps: 3,
-                ),
-                const SizedBox(height: 32),
-
-                // Title
-                Text(
-                  'How should we track\nyour sleep?',
-                  style: Theme.of(context).textTheme.displayMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'All features are optional and privacy-focused',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 32),
-
-                // Privacy assurance banner
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        SleepTheme.success.withOpacity(0.1),
-                        SleepTheme.info.withOpacity(0.1),
-                      ],
+          Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: SingleChildScrollView(
+                padding: padding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SetupProgressIndicator(
+                      currentStep: 3,
+                      totalSteps: 3,
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: SleepTheme.success.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.security,
-                        color: SleepTheme.success,
-                        size: 24,
+                    SizedBox(height: spacing),
+
+                    Text(
+                      'How should we track\nyour sleep?',
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        fontSize: isTablet ? 32 : 28,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Your privacy is our priority. All data stays on your device.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SleepTheme.textPrimary,
-                            fontWeight: FontWeight.w500,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'All features are optional and privacy-focused',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    SizedBox(height: spacing),
+
+                    Container(
+                      padding: EdgeInsets.all(isTablet ? 20 : 16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            SleepTheme.success.withOpacity(0.1),
+                            SleepTheme.info.withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: SleepTheme.success.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.security,
+                            color: SleepTheme.success,
+                            size: isTablet ? 28 : 24,
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Feature 1: Auto-start tracking
-                Obx(() => _PermissionCard(
-                  icon: Icons.bedtime,
-                  iconColor: SleepTheme.primaryMid,
-                  title: 'Auto-start tracking',
-                  description: 'Automatically detect when you\'re in bed',
-                  details: 'Uses phone charging status and screen-off time to detect bedtime',
-                  isEnabled: autoStartEnabled.value,
-                  onChanged: (val) => autoStartEnabled.value = val,
-                  recommended: true,
-                )),
-                const SizedBox(height: 16),
-
-                // Feature 2: Motion detection
-                Obx(() => _PermissionCard(
-                  icon: Icons.directions_walk,
-                  iconColor: SleepTheme.accentPurple,
-                  title: 'Motion detection',
-                  description: 'Estimate sleep phases and awakenings',
-                  details: 'Low-power mode uses <1% battery. Helps identify restless nights.',
-                  isEnabled: motionDetectionEnabled.value,
-                  onChanged: (val) => motionDetectionEnabled.value = val,
-                  batteryImpact: 'Low',
-                )),
-                const SizedBox(height: 16),
-
-                // Feature 3: Noise detection
-                Obx(() => _PermissionCard(
-                  icon: Icons.graphic_eq,
-                  iconColor: SleepTheme.info,
-                  title: 'Noise detection',
-                  description: 'Track disturbances without recording',
-                  details: 'Only logs event counts and durations—never stores audio.',
-                  isEnabled: noiseDetectionEnabled.value,
-                  onChanged: (val) => noiseDetectionEnabled.value = val,
-                  batteryImpact: 'Medium',
-                  privacyNote: 'No audio is ever recorded or stored',
-                )),
-                const SizedBox(height: 32),
-
-                // Privacy link
-                GestureDetector(
-                  onTap: () {
-                    _showPrivacyDialog(context);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: SleepTheme.primaryPale,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.privacy_tip_outlined,
-                          color: SleepTheme.primaryMid,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'How we protect your privacy',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: SleepTheme.primaryMid,
-                              fontWeight: FontWeight.w600,
+                          SizedBox(width: isTablet ? 16 : 12),
+                          Expanded(
+                            child: Text(
+                              'Your privacy is our priority. All data stays on your device.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: SleepTheme.textPrimary,
+                                fontWeight: FontWeight.w500,
+                                fontSize: isTablet ? 14 : 12,
+                              ),
                             ),
                           ),
-                        ),
-                        const Icon(
-                          Icons.arrow_forward_ios,
-                          color: SleepTheme.primaryMid,
-                          size: 16,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ),
+                    SizedBox(height: spacing),
 
-                const SizedBox(height: 100), // Space for button
-              ],
+                    Obx(() => _PermissionCard(
+                      icon: Icons.bedtime,
+                      iconColor: SleepTheme.primaryMid,
+                      title: 'Auto-start tracking',
+                      description: 'Automatically detect when you\'re in bed',
+                      details:
+                      'Uses phone charging status and screen-off time to detect bedtime',
+                      isEnabled: autoStartEnabled.value,
+                      onChanged: (val) => autoStartEnabled.value = val,
+                      recommended: true,
+                    )),
+                    const SizedBox(height: 16),
+
+                    Obx(() => _PermissionCard(
+                      icon: Icons.directions_walk,
+                      iconColor: SleepTheme.accentPurple,
+                      title: 'Motion detection',
+                      description: 'Estimate sleep phases and awakenings',
+                      details:
+                      'Low-power mode uses <1% battery. Helps identify restless nights.',
+                      isEnabled: motionDetectionEnabled.value,
+                      onChanged: (val) => motionDetectionEnabled.value = val,
+                      batteryImpact: 'Low',
+                    )),
+                    const SizedBox(height: 16),
+
+                    Obx(() => _PermissionCard(
+                      icon: Icons.graphic_eq,
+                      iconColor: SleepTheme.info,
+                      title: 'Noise detection',
+                      description: 'Track disturbances without recording',
+                      details:
+                      'Only logs event counts and durations—never stores audio.',
+                      isEnabled: noiseDetectionEnabled.value,
+                      onChanged: (val) => noiseDetectionEnabled.value = val,
+                      batteryImpact: 'Medium',
+                      privacyNote: 'No audio is ever recorded or stored',
+                    )),
+                    SizedBox(height: spacing),
+
+                    GestureDetector(
+                      onTap: () {
+                        _showPrivacyDialog(context);
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(isTablet ? 20 : 16),
+                        decoration: BoxDecoration(
+                          color: SleepTheme.primaryPale,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.privacy_tip_outlined,
+                              color: SleepTheme.primaryMid,
+                              size: isTablet ? 24 : 20,
+                            ),
+                            SizedBox(width: isTablet ? 16 : 12),
+                            Expanded(
+                              child: Text(
+                                'How we protect your privacy',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: SleepTheme.primaryMid,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: isTablet ? 16 : 14,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              color: SleepTheme.primaryMid,
+                              size: isTablet ? 18 : 16,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
             ),
           ),
 
-          // Loading overlay
           Obx(() {
             if (controller.isLoading.value) {
               return const Positioned.fill(
@@ -208,43 +213,47 @@ class SleepSetupScreen3 extends GetView<SleepController> {
             return const SizedBox.shrink();
           }),
 
-          // Bottom button
           Positioned(
             left: 0,
             right: 0,
-            bottom: -20,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: SleepTheme.surface,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Obx(() => ElevatedButton(
-                  onPressed: !controller.isLoading.value ? handleComplete : null,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(56),
-                    backgroundColor: Colors.indigo,       // 👈 button background
-                    foregroundColor: Colors.white,        // 👈 text & icon color
-                    shape: RoundedRectangleBorder(        // optional: make it pretty
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text('Complete Setup'),
-                      SizedBox(width: 8),
-                      Icon(Icons.check, size: 20),
+            bottom: 0,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Container(
+                  padding: padding,
+                  decoration: BoxDecoration(
+                    color: SleepTheme.surface,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
                     ],
                   ),
-                )),
+                  child: SafeArea(
+                    child: Obx(() => ElevatedButton(
+                      onPressed: !controller.isLoading.value ? handleComplete : null,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: Size.fromHeight(isTablet ? 60 : 56),
+                        backgroundColor: Colors.indigo,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Text('Complete Setup'),
+                          SizedBox(width: 8),
+                          Icon(Icons.check, size: 20),
+                        ],
+                      ),
+                    )),
+                  ),
+                ),
               ),
             ),
           ),
@@ -254,21 +263,27 @@ class SleepSetupScreen3 extends GetView<SleepController> {
   }
 
   void _showPrivacyDialog(BuildContext context) {
+    final isTablet = ResponsiveHelper.isTablet(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
-          children: const [
-            Icon(Icons.security, color: SleepTheme.success),
-            SizedBox(width: 12),
-            Text('Privacy & Data'),
+          children: [
+            Icon(
+              Icons.security,
+              color: SleepTheme.success,
+              size: isTablet ? 28 : 24,
+            ),
+            SizedBox(width: isTablet ? 16 : 12),
+            const Text('Privacy & Data'),
           ],
         ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: const [
               _PrivacyPoint(
                 icon: Icons.phone_android,
                 text: 'All sleep data is stored locally on your device',
@@ -289,11 +304,12 @@ class SleepSetupScreen3 extends GetView<SleepController> {
                 icon: Icons.file_download,
                 text: 'Export your data as CSV or JSON',
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text(
                 'We follow industry best practices to protect your sensitive health data.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                style: TextStyle(
                   fontStyle: FontStyle.italic,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -339,8 +355,11 @@ class _PermissionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmall = ResponsiveHelper.isSmallScreen(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isTablet ? 24 : (isSmall ? 16 : 20)),
       decoration: BoxDecoration(
         color: SleepTheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -353,16 +372,21 @@ class _PermissionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(isTablet ? 12 : 10),
                 decoration: BoxDecoration(
                   color: iconColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: iconColor, size: 24),
+                child: Icon(
+                  icon,
+                  color: iconColor,
+                  size: isTablet ? 28 : 24,
+                ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: isTablet ? 20 : 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,6 +398,7 @@ class _PermissionCard extends StatelessWidget {
                             title,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
+                              fontSize: isTablet ? 18 : (isSmall ? 14 : 16),
                             ),
                           ),
                         ),
@@ -390,10 +415,10 @@ class _PermissionCard extends StatelessWidget {
                             ),
                             child: Text(
                               'Recommended',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              style: TextStyle(
                                 color: SleepTheme.success,
                                 fontWeight: FontWeight.w600,
-                                fontSize: 9,
+                                fontSize: isSmall ? 8 : 9,
                               ),
                             ),
                           ),
@@ -403,30 +428,37 @@ class _PermissionCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       description,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: isTablet ? 14 : (isSmall ? 11 : 12),
+                      ),
                     ),
                   ],
                 ),
               ),
-              Switch(
-                value: isEnabled,
-                onChanged: onChanged,
-                activeColor: iconColor,
+              const SizedBox(width: 8),
+              Transform.scale(
+                scale: isTablet ? 1.1 : 1.0,
+                child: Switch(
+                  value: isEnabled,
+                  onChanged: onChanged,
+                  activeColor: iconColor,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isTablet ? 16 : 12),
           Text(
             details,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SleepTheme.textSecondary,
               height: 1.5,
+              fontSize: isTablet ? 14 : (isSmall ? 11 : 12),
             ),
           ),
           if (batteryImpact != null || privacyNote != null) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: isTablet ? 16 : 12),
             Wrap(
-              spacing: 12,
+              spacing: isTablet ? 16 : 12,
               runSpacing: 8,
               children: [
                 if (batteryImpact != null)
@@ -465,8 +497,14 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmall = ResponsiveHelper.isSmallScreen(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 12 : 10,
+        vertical: isTablet ? 8 : 6,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
@@ -474,12 +512,16 @@ class _InfoChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
+          Icon(
+            icon,
+            size: isTablet ? 16 : 14,
+            color: color,
+          ),
+          SizedBox(width: isTablet ? 8 : 6),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: isTablet ? 13 : (isSmall ? 10 : 11),
               fontWeight: FontWeight.w600,
               color: color,
             ),
@@ -501,17 +543,25 @@ class _PrivacyPoint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = ResponsiveHelper.isTablet(context);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: isTablet ? 16 : 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: SleepTheme.success),
-          const SizedBox(width: 12),
+          Icon(
+            icon,
+            size: isTablet ? 24 : 20,
+            color: SleepTheme.success,
+          ),
+          SizedBox(width: isTablet ? 16 : 12),
           Expanded(
             child: Text(
               text,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: isTablet ? 15 : 14,
+              ),
             ),
           ),
         ],

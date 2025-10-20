@@ -54,9 +54,11 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
 
     // sensible defaults (yesterday -> today)
     DateTime date = DateTime.now().subtract(const Duration(days: 1));
-    TimeOfDay? bed = SleepTimeHelper.parseTimeOfDay(controller.targetBedtime.value) ??
+    TimeOfDay? bed =
+        SleepTimeHelper.parseTimeOfDay(controller.targetBedtime.value) ??
         const TimeOfDay(hour: 23, minute: 0);
-    TimeOfDay? wake = SleepTimeHelper.parseTimeOfDay(controller.targetWake.value) ??
+    TimeOfDay? wake =
+        SleepTimeHelper.parseTimeOfDay(controller.targetWake.value) ??
         const TimeOfDay(hour: 7, minute: 0);
 
     String _fmtDate(DateTime d) =>
@@ -100,7 +102,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
         helpText: 'Select Bedtime',
         builder: (ctx, child) {
           return Theme(
-            data: Theme.of(context).copyWith(
+            data: Theme.of(ctx).copyWith(
               timePickerTheme: const TimePickerThemeData(
                 backgroundColor: SleepTheme.surface,
                 hourMinuteTextColor: SleepTheme.primaryMid,
@@ -128,7 +130,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
         helpText: 'Select Wake Time',
         builder: (ctx, child) {
           return Theme(
-            data: Theme.of(context).copyWith(
+            data: Theme.of(ctx).copyWith(
               timePickerTheme: const TimePickerThemeData(
                 backgroundColor: SleepTheme.surface,
                 hourMinuteTextColor: SleepTheme.primaryMid,
@@ -183,10 +185,11 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                 durationColor = Colors.teal;
               }
 
+              // await pickers before rebuilding
               Widget chipButton({
                 required IconData icon,
                 required String label,
-                required VoidCallback onTap,
+                required Future<void> Function() onTap,
               }) {
                 return ConstrainedBox(
                   constraints: const BoxConstraints(minWidth: 120),
@@ -197,11 +200,14 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(22),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                     ),
                     onPressed: () async {
-                      onTap();
-                      setState(() {}); // refresh texts/duration
+                      await onTap();
+                      if (ctx.mounted) setState(() {});
                     },
                     icon: Icon(icon, size: 18),
                     label: FittedBox(
@@ -214,121 +220,173 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                 );
               }
 
-              return SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // title
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6, bottom: 10),
-                      child: Text(
-                        'Add Manual Sleep Log',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF3F3D56),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+              // Responsive, centered content with max width
+              return LayoutBuilder(
+                builder: (ctx, cons) {
+                  final horizontalPad = cons.maxWidth < 360 ? 8.0 : 16.0;
+
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPad,
+                      6,
+                      horizontalPad,
+                      16,
                     ),
-
-                    // responsive controls
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        chipButton(
-                          icon: Icons.event,
-                          label: _fmtDate(date),
-                          onTap: pickDate,
-                        ),
-                        chipButton(
-                          icon: Icons.bedtime,
-                          label: 'Bed: ${SleepTimeHelper.formatTimeOfDay(bed!)}',
-                          onTap: pickBed,
-                        ),
-                        chipButton(
-                          icon: Icons.wb_sunny,
-                          label: 'Wake: ${SleepTimeHelper.formatTimeOfDay(wake!)}',
-                          onTap: pickWake,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // duration preview
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: durationColor.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: durationColor.withOpacity(0.35)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.timer_outlined, size: 18, color: durationColor),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Duration: $durationText',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: durationColor,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 520),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // title
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 6,
+                                bottom: 10,
+                              ),
+                              child: Text(
+                                'Add Manual Sleep Log',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF3F3D56),
+                                    ),
+                                textAlign: TextAlign.center,
+                                softWrap: true,
+                                maxLines: 2,
+                              ),
                             ),
-                          ),
-                        ],
+
+                            // responsive controls
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                chipButton(
+                                  icon: Icons.event,
+                                  label: _fmtDate(date),
+                                  onTap: pickDate,
+                                ),
+                                chipButton(
+                                  icon: Icons.bedtime,
+                                  label:
+                                      'Bed: ${SleepTimeHelper.formatTimeOfDay(bed!)}',
+                                  onTap: pickBed,
+                                ),
+                                chipButton(
+                                  icon: Icons.wb_sunny,
+                                  label:
+                                      'Wake: ${SleepTimeHelper.formatTimeOfDay(wake!)}',
+                                  onTap: pickWake,
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            // duration preview
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: durationColor.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: durationColor.withOpacity(0.35),
+                                ),
+                              ),
+                              child: Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                children: [
+                                  Icon(
+                                    Icons.timer_outlined,
+                                    size: 18,
+                                    color: durationColor,
+                                  ),
+                                  Text(
+                                    'Duration: $durationText',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: durationColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // save button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.indigo,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final ok = await controller
+                                      .saveSleepLogFromTimes(
+                                        bedtimeHHmm:
+                                            SleepTimeHelper.formatTimeOfDay(
+                                              bed!,
+                                            ),
+                                        wakeHHmm:
+                                            SleepTimeHelper.formatTimeOfDay(
+                                              wake!,
+                                            ),
+                                        date: date,
+                                      );
+                                  if (ok) {
+                                    Get.back();
+                                    Get.snackbar(
+                                      'Saved',
+                                      'Sleep log added',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      backgroundColor: Colors.green.withOpacity(
+                                        0.85,
+                                      ),
+                                      colorText: Colors.white,
+                                    );
+                                  } else {
+                                    Get.snackbar(
+                                      'Error',
+                                      'Failed to save log',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      backgroundColor: Colors.red.withOpacity(
+                                        0.85,
+                                      ),
+                                      colorText: Colors.white,
+                                    );
+                                  }
+                                },
+                                child: const Text(
+                                  'Save',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // save button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () async {
-                          final ok = await controller.saveSleepLogFromTimes(
-                            bedtimeHHmm: SleepTimeHelper.formatTimeOfDay(bed!),
-                            wakeHHmm: SleepTimeHelper.formatTimeOfDay(wake!),
-                            date: date,
-                          );
-                          if (ok) {
-                            Get.back();
-                            Get.snackbar(
-                              'Saved',
-                              'Sleep log added',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: Colors.green.withOpacity(0.85),
-                              colorText: Colors.white,
-                            );
-                          } else {
-                            Get.snackbar(
-                              'Error',
-                              'Failed to save log',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: Colors.red.withOpacity(0.85),
-                              colorText: Colors.white,
-                            );
-                          }
-                        },
-                        child: const Text(
-                          'Save',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           ),
@@ -336,8 +394,6 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       ),
     );
   }
-
-
 
   /// Show bottom sheet (one time) if in morning window and log missing
   Future<void> _maybePromptMorning() async {
@@ -368,8 +424,10 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Good morning ☀️",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const Text(
+                "Good morning ☀️",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 8),
               const Text(
                 "Log your sleep from last night?",
@@ -412,7 +470,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       backgroundColor: SleepTheme.background,
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () => Get.offAll(() => NavigationMenu()),
+          onPressed: () => Get.offAll(() => const NavigationMenu()),
           icon: const Icon(Icons.arrow_back_ios_new),
         ),
         automaticallyImplyLeading: false,
@@ -420,16 +478,72 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              Get.snackbar(
-                'Settings',
-                'Sleep settings coming soon',
-                snackPosition: SnackPosition.BOTTOM,
-                backgroundColor: SleepTheme.primaryPale,
-                colorText: SleepTheme.textPrimary,
-              );
+          PopupMenuButton<int>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'More options',
+            position: PopupMenuPosition.under,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            itemBuilder: (ctx) => [
+              PopupMenuItem(
+                value: 1,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.alarm),
+                  title: const Text('Set Morning Reminder'),
+                  subtitle: Text(controller.morningReminderHHmm.value),
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 99,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.settings_outlined),
+                  title: Text('Sleep settings (soon)'),
+                ),
+              ),
+            ],
+            onSelected: (v) async {
+              if (v == 1) {
+                final current = SleepTimeHelper.parseTimeOfDay(
+                  controller.morningReminderHHmm.value,
+                );
+
+                final picked = await showTimePicker(
+                  context: context,
+                  initialTime: current,
+                  helpText: 'Morning reminder time',
+                  builder: (ctx, child) {
+                    return Theme(
+                      data: Theme.of(ctx).copyWith(
+                        colorScheme: const ColorScheme.light(
+                          primary: Colors.indigo, // header & active controls
+                          onPrimary: Colors.white, // text on header
+                          onSurface: Colors.indigo, // body text
+                        ),
+                        textButtonTheme: TextButtonThemeData(
+                          style: TextButton.styleFrom(
+                            foregroundColor:
+                                Colors.indigo, // CANCEL & OK buttons
+                          ),
+                        ),
+                      ),
+                      child: child!,
+                    );
+                  },
+                );
+
+                if (picked != null) {
+                  controller.updateMorningReminder(picked);
+                  Get.snackbar(
+                    'Updated',
+                    'Morning reminder set to ${SleepTimeHelper.formatTimeOfDay(picked)}',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                }
+              }
             },
           ),
         ],
@@ -444,9 +558,11 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
 
         return RefreshIndicator(
           onRefresh: () async {
-          await controller.loadUserData();
-          setState(() { _todayLogFuture = _hasLogForToday(); });
-        },
+            await controller.loadUserData();
+            setState(() {
+              _todayLogFuture = _hasLogForToday();
+            });
+          },
           color: SleepTheme.primaryMid,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -461,7 +577,8 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                     final now = DateTime.now();
                     final inMorningWindow =
                         now.hour >= 6 && now.hour <= 11; // tune as needed
-                    final missing = snap.connectionState == ConnectionState.done &&
+                    final missing =
+                        snap.connectionState == ConnectionState.done &&
                         (snap.data == false);
                     if (missing && inMorningWindow) {
                       return _MissingLogBanner(
@@ -499,7 +616,14 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                 const SizedBox(height: 24),
                 Row(
                   children: [
-                    Text('Live Tracking', /* ... */),
+                    const Text(
+                      'Live Tracking',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: SleepTheme.textPrimary,
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     _buildSessionStatusChip(),
                     const Spacer(),
@@ -529,8 +653,9 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                         final moving = controller.isUserMoving.value;
                         return _buildStatCard(
                           icon: Icons.directions_walk,
-                          iconColor:
-                          moving ? SleepTheme.warning : SleepTheme.success,
+                          iconColor: moving
+                              ? SleepTheme.warning
+                              : SleepTheme.success,
                           value: moving ? "Moving" : "Still",
                           label: "Motion Status",
                         );
@@ -604,36 +729,42 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       children: [
         Text(
           '$greeting $emoji',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
         Text(
           'Here\'s your sleep summary',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: SleepTheme.textSecondary,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: SleepTheme.textSecondary),
         ),
       ],
     );
   }
 
-  Widget _buildHeroCard(BuildContext context, SleepProfile sleepProfile,
-      {SleepLog? log}) {
-    final int sleepScore =
-    (log != null) ? controller.computeSleepScore(log, sleepProfile) : 0;
+  Widget _buildHeroCard(
+    BuildContext context,
+    SleepProfile sleepProfile, {
+    SleepLog? log,
+  }) {
+    final int sleepScore = (log != null)
+        ? controller.computeSleepScore(log, sleepProfile)
+        : -1; // use -1 as flag
 
     final int durationMin =
-        (log?.totalSleepMinutes ?? log?.durationMinutes) ?? 0;
-    final String duration = durationMin > 0
+        (log?.totalSleepMinutes ?? log?.durationMinutes) ?? -1;
+
+    final String duration = durationMin >= 0
         ? "${durationMin ~/ 60}h ${durationMin % 60}m"
-        : '--';
+        : "No sleep logged yet";
 
-    final int awakenings = log?.awakenings ?? 0;
+    final int awakenings = log?.awakenings ?? -1;
 
-    final String bedtime = log?.bedtimeHHmm ?? sleepProfile.targetBedtime;
-    final String wake = log?.wakeHHmm ?? sleepProfile.targetWake;
+    final String bedtime = log?.bedtimeHHmm ?? "Not logged";
+    final String wake = log?.wakeHHmm ?? "Not logged";
+
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -655,14 +786,13 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                   value: (sleepScore.clamp(0, 100)) / 100.0,
                   strokeWidth: 12,
                   backgroundColor: Colors.white.withOpacity(0.2),
-                  valueColor:
-                  const AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               ),
               Column(
                 children: [
                   Text(
-                    log != null ? sleepScore.toString() : '—',
+                    sleepScore >= 0 ? sleepScore.toString() : "No data",
                     style: const TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
@@ -671,11 +801,9 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                   ),
                   const Text(
                     'Sleep Score',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.white70),
                   ),
+
                 ],
               ),
             ],
@@ -711,14 +839,19 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMiniStat(log != null ? '✅' : '—', 'On time'),
                 _buildMiniStat(
-                    log != null
-                        ? '${_approxEfficiency(durationMin, log)}%'
-                        : '—',
-                    'Efficiency'),
+                  log != null ? '✅' : '—',
+                  'On time',
+                ),
                 _buildMiniStat(
-                    log != null ? '$awakenings' : '—', 'Awakenings'),
+                  log != null ? '${_approxEfficiency(durationMin, log)}%' : 'No data',
+                  'Efficiency',
+                ),
+                _buildMiniStat(
+                  awakenings >= 0 ? '$awakenings' : 'No data',
+                  'Awakenings',
+                ),
+
               ],
             ),
           ),
@@ -726,12 +859,15 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
 
           // Time range
           Text(
-            'In bed: $bedtime → Awake: $wake',
+            log != null
+                ? 'In bed: $bedtime → Awake: $wake'
+                : 'No sleep session logged yet',
             style: TextStyle(
               fontSize: 12,
               color: Colors.white.withOpacity(0.7),
             ),
           ),
+
         ],
       ),
     );
@@ -761,10 +897,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.white.withOpacity(0.7),
-          ),
+          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7)),
         ),
       ],
     );
@@ -817,16 +950,19 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
           child: FutureBuilder<int>(
             future: controller.getVsLastWeekDeltaMinutes(),
             builder: (context, snap) {
-              final has = snap.connectionState == ConnectionState.done && snap.hasData;
+              final has =
+                  snap.connectionState == ConnectionState.done && snap.hasData;
               final deltaMin = has ? snap.data!.clamp(-24 * 60, 24 * 60) : 0;
               final sign = deltaMin > 0 ? '+' : (deltaMin < 0 ? '−' : '');
               final absMin = deltaMin.abs();
               final value = has ? '$sign$absMin min' : '—';
 
-              final icon =
-              deltaMin >= 0 ? Icons.trending_up : Icons.trending_down;
-              final color =
-              deltaMin >= 0 ? SleepTheme.success : SleepTheme.warning;
+              final icon = deltaMin >= 0
+                  ? Icons.trending_up
+                  : Icons.trending_down;
+              final color = deltaMin >= 0
+                  ? SleepTheme.success
+                  : SleepTheme.warning;
 
               return _buildStatCard(
                 icon: icon,
@@ -891,11 +1027,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.calendar_today,
-            color: SleepTheme.info,
-            size: 20,
-          ),
+          const Icon(Icons.calendar_today, color: SleepTheme.info, size: 20),
           const SizedBox(height: 12),
           const Text(
             'Consistency',
@@ -917,20 +1049,17 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
+            child: const LinearProgressIndicator(
               value: 0.78,
               backgroundColor: SleepTheme.primaryPale,
-              valueColor: const AlwaysStoppedAnimation(SleepTheme.info),
+              valueColor: AlwaysStoppedAnimation(SleepTheme.info),
               minHeight: 6,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
             'Last 7 days',
-            style: TextStyle(
-              fontSize: 11,
-              color: SleepTheme.textSecondary,
-            ),
+            style: TextStyle(fontSize: 11, color: SleepTheme.textSecondary),
           ),
         ],
       ),
@@ -990,10 +1119,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
           const SizedBox(height: 8),
           const Text(
             'Rolling 7 days',
-            style: TextStyle(
-              fontSize: 11,
-              color: SleepTheme.textSecondary,
-            ),
+            style: TextStyle(fontSize: 11, color: SleepTheme.textSecondary),
           ),
         ],
       ),
@@ -1033,10 +1159,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            phaseColor.withOpacity(0.1),
-            phaseColor.withOpacity(0.05),
-          ],
+          colors: [phaseColor.withOpacity(0.1), phaseColor.withOpacity(0.05)],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: phaseColor.withOpacity(0.3)),
@@ -1102,11 +1225,132 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                 label: 'Wind Down',
                 color: SleepTheme.primaryMid,
                 onTap: () {
-                  Get.snackbar(
-                    'Wind Down',
-                    'Evening routine coming soon',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: SleepTheme.primaryPale,
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(18),
+                      ),
+                    ),
+                    builder: (_) {
+                      int mins = 20;
+                      final checks = <String, bool>{
+                        'Dim the lights': false,
+                        'Put phone on DND': false,
+                        'Light stretch / breath': false,
+                        'No screens': false,
+                      }.obs;
+
+                      // auto-suggest start: targetBedtime - 30
+                      final tb = SleepTimeHelper.parseTimeOfDay(
+                        controller.targetBedtime.value,
+                      );
+                      final now = TimeOfDay.now();
+                      final suggested = TimeOfDay(
+                        hour: (tb.hour * 60 + tb.minute - 30) ~/ 60,
+                        minute: (tb.hour * 60 + tb.minute - 30) % 60,
+                      );
+                      final suggestionStr = SleepTimeHelper.formatTimeOfDay(
+                        suggested,
+                      );
+                      final alreadyPast =
+                          (now.hour * 60 + now.minute) >
+                          (suggested.hour * 60 + suggested.minute);
+
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                        child: Obx(
+                          () => Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Wind Down',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Suggested: $suggestionStr (30 min before bedtime)'
+                                '${alreadyPast ? " • tomorrow" : ""}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  const Text('Duration'),
+                                  const SizedBox(width: 12),
+                                  DropdownButton<int>(
+                                    value: mins,
+                                    items: const [15, 20, 30, 45]
+                                        .map(
+                                          (m) => DropdownMenuItem(
+                                            value: m,
+                                            child: Text('$m min'),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: (v) {
+                                      if (v != null) mins = v;
+                                    },
+                                  ),
+                                  const Spacer(),
+                                  if (controller.windDownActive.value)
+                                    Text(
+                                      '${(controller.windDownRemaining.value ~/ 60).toString().padLeft(2, "0")}:${(controller.windDownRemaining.value % 60).toString().padLeft(2, "0")}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              ...checks.keys.map(
+                                (k) => CheckboxListTile(
+                                  dense: true,
+                                  value: checks[k],
+                                  onChanged: (v) => checks[k] = v ?? false,
+                                  title: Text(k),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () {
+                                        controller.cancelWindDown();
+                                        Get.back();
+                                      },
+                                      child: const Text('Cancel'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.indigo,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        controller.startWindDown(minutes: mins);
+                                      },
+                                      child: Text(
+                                        controller.windDownActive.value
+                                            ? 'Restart'
+                                            : 'Start',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -1130,7 +1374,6 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                   }
                 },
               ),
-
             ),
           ],
         ),
@@ -1142,12 +1385,314 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                 icon: Icons.snooze,
                 label: 'Log Nap',
                 color: SleepTheme.accentPurple,
-                onTap: () {
-                  Get.snackbar(
-                    'Log Nap',
-                    'Nap tracking coming soon',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: SleepTheme.accentPale,
+                onTap: () async {
+                  await showModalBottomSheet(
+                    context: context,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(18),
+                      ),
+                    ),
+                    builder: (_) => Obx(() {
+                      final active = controller.napActive.value;
+                      final elapsed = controller.napElapsed.value;
+                      final mm = (elapsed ~/ 60).toString().padLeft(2, '0');
+                      final ss = (elapsed % 60).toString().padLeft(2, '0');
+
+                      DateTime end = DateTime.now();
+                      DateTime start = end.subtract(
+                        const Duration(minutes: 20),
+                      );
+
+                      return StatefulBuilder(
+                        builder: (ctx, setState) => Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Nap',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Live timer (fixed width constraints on button)
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: SleepTheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: SleepTheme.divider),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.timer_outlined),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      active ? '$mm:$ss' : '00:00',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    // ✅ shrink-wrapped, height-bounded to avoid infinite width
+                                    IntrinsicWidth(
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 0,
+                                        ),
+                                        child: SizedBox(
+                                          height: 50,
+                                          child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: active
+                                                  ? Colors.red
+                                                  : Colors.indigo,
+                                              foregroundColor: Colors.white,
+                                              minimumSize: const Size(0, 50),
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                  ),
+                                            ),
+                                            onPressed:
+                                                controller.toggleNapSession,
+                                            child: Text(
+                                              active
+                                                  ? 'Stop & Save'
+                                                  : 'Start Nap',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+                              const Divider(),
+                              const SizedBox(height: 12),
+
+                              // Quick manual log
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.indigo,                 // text & ripple
+                                        side: const BorderSide(color: Colors.indigo),   // border
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(28),      // pill look
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                      ),
+                                      onPressed: () async {
+                                        final t = await showTimePicker(
+                                          context: ctx,
+                                          initialTime: TimeOfDay.fromDateTime(start),
+                                          helpText: 'Nap start',
+                                          builder: (pickerCtx, child) {
+                                            const indigo = Colors.indigo;
+
+                                            return Theme(
+                                              data: Theme.of(pickerCtx).copyWith(
+                                                // keep your existing colorScheme overrides if you like
+                                                colorScheme: Theme.of(pickerCtx).colorScheme.copyWith(
+                                                  primary: indigo,
+                                                  onPrimary: Colors.white,
+                                                  onSurface: indigo,
+                                                ),
+                                                textButtonTheme: TextButtonThemeData(
+                                                  style: TextButton.styleFrom(foregroundColor: indigo),
+                                                ),
+                                                timePickerTheme: TimePickerThemeData(
+                                                  // the big hour/minute “pill”
+                                                  hourMinuteColor: MaterialStateColor.resolveWith(
+                                                        (s) => indigo, // filled pill
+                                                  ),
+                                                  hourMinuteTextColor: MaterialStateColor.resolveWith(
+                                                        (s) => Colors.white, // visible text
+                                                  ),
+                                                  hourMinuteShape: const RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.all(Radius.circular(16)),
+                                                  ),
+
+                                                  // AM/PM chip
+                                                  dayPeriodColor: MaterialStateColor.resolveWith(
+                                                        (s) => s.contains(MaterialState.selected)
+                                                        ? indigo
+                                                        : indigo.withOpacity(.08),
+                                                  ),
+                                                  dayPeriodTextColor: MaterialStateColor.resolveWith(
+                                                        (s) => s.contains(MaterialState.selected)
+                                                        ? Colors.white
+                                                        : indigo,
+                                                  ),
+                                                  dayPeriodShape: const RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                                                  ),
+
+                                                  // Dial
+                                                  dialBackgroundColor: indigo.withOpacity(.08),
+                                                  dialHandColor: indigo,
+                                                  dialTextColor: MaterialStateColor.resolveWith(
+                                                        (s) => s.contains(MaterialState.selected) ? Colors.white : indigo,
+                                                  ),
+
+                                                  entryModeIconColor: indigo,
+                                                  helpTextStyle: const TextStyle(fontWeight: FontWeight.w600),
+                                                ),
+                                              ),
+                                              child: child!,
+                                            );
+                                          },
+
+                                        );
+                                        if (t != null) {
+                                          final d = DateTime.now();
+                                          start = DateTime(d.year, d.month, d.day, t.hour, t.minute);
+                                          if (ctx.mounted) setState(() {});
+                                        }
+                                      },
+                                      child: Text(
+                                        'Start: ${TimeOfDay.fromDateTime(start).format(ctx)}',
+                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.indigo,
+                                        side: const BorderSide(color: Colors.indigo),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(28),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                      ),
+                                      onPressed: () async {
+                                        final t = await showTimePicker(
+                                          context: ctx,
+                                          initialTime: TimeOfDay.fromDateTime(end),
+                                          helpText: 'Nap end',
+                                          builder: (pickerCtx, child) {
+                                            const indigo = Colors.indigo;
+
+                                            return Theme(
+                                              data: Theme.of(pickerCtx).copyWith(
+                                                // keep your existing colorScheme overrides if you like
+                                                colorScheme: Theme.of(pickerCtx).colorScheme.copyWith(
+                                                  primary: indigo,
+                                                  onPrimary: Colors.white,
+                                                  onSurface: indigo,
+                                                ),
+                                                textButtonTheme: TextButtonThemeData(
+                                                  style: TextButton.styleFrom(foregroundColor: indigo),
+                                                ),
+                                                timePickerTheme: TimePickerThemeData(
+                                                  // the big hour/minute “pill”
+                                                  hourMinuteColor: MaterialStateColor.resolveWith(
+                                                        (s) => indigo, // filled pill
+                                                  ),
+                                                  hourMinuteTextColor: MaterialStateColor.resolveWith(
+                                                        (s) => Colors.white, // visible text
+                                                  ),
+                                                  hourMinuteShape: const RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.all(Radius.circular(16)),
+                                                  ),
+
+                                                  // AM/PM chip
+                                                  dayPeriodColor: MaterialStateColor.resolveWith(
+                                                        (s) => s.contains(MaterialState.selected)
+                                                        ? indigo
+                                                        : indigo.withOpacity(.08),
+                                                  ),
+                                                  dayPeriodTextColor: MaterialStateColor.resolveWith(
+                                                        (s) => s.contains(MaterialState.selected)
+                                                        ? Colors.white
+                                                        : indigo,
+                                                  ),
+                                                  dayPeriodShape: const RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                                                  ),
+
+                                                  // Dial
+                                                  dialBackgroundColor: indigo.withOpacity(.08),
+                                                  dialHandColor: indigo,
+                                                  dialTextColor: MaterialStateColor.resolveWith(
+                                                        (s) => s.contains(MaterialState.selected) ? Colors.white : indigo,
+                                                  ),
+
+                                                  entryModeIconColor: indigo,
+                                                  helpTextStyle: const TextStyle(fontWeight: FontWeight.w600),
+                                                ),
+                                              ),
+                                              child: child!,
+                                            );
+                                          },
+
+                                        );
+                                        if (t != null) {
+                                          final d = DateTime.now();
+                                          end = DateTime(d.year, d.month, d.day, t.hour, t.minute);
+                                          if (ctx.mounted) setState(() {});
+                                        }
+                                      },
+                                      child: Text(
+                                        'End: ${TimeOfDay.fromDateTime(end).format(ctx)}',
+                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 8),
+                              Text(
+                                'Duration: ${end.isAfter(start) ? end.difference(start).inMinutes : 0} min',
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.indigo,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: end.isAfter(start)
+                                      ? () async {
+                                          final ok = await controller
+                                              .saveNapLog(
+                                                start: start,
+                                                end: end,
+                                              );
+                                          if (ok) {
+                                            Get.back();
+                                            Get.snackbar('Saved', 'Nap logged');
+                                          } else {
+                                            Get.snackbar(
+                                              'Error',
+                                              'Couldn’t save nap',
+                                            );
+                                          }
+                                        }
+                                      : null,
+                                  child: const Text('Save Quick Log'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                   );
                 },
               ),
@@ -1158,14 +1703,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                 icon: Icons.insights,
                 label: 'Insights',
                 color: SleepTheme.info,
-                onTap: () {
-                  Get.snackbar(
-                    'Insights',
-                    'Detailed insights coming soon',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: SleepTheme.info.withOpacity(0.2),
-                  );
-                },
+                onTap: () => _showInsightsSheet(context),
               ),
             ),
           ],
@@ -1173,6 +1711,176 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       ],
     );
   }
+
+  Widget _insightCard({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SleepTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SleepTheme.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: SleepTheme.info, size: 20),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              color: SleepTheme.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: SleepTheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Future<void> _showInsightsSheet(BuildContext context) async {
+    // pull data
+    final logs = await controller.getRecentLogs(days: 7);
+    if (!mounted) return;
+
+    // compute a few simple insights
+    int totalMin = 0;
+    int nights = 0;
+    int goodNights = 0;
+    int avgEfficiency = 0;
+    int latestLatency = 0;
+
+    for (final l in logs) {
+      final dur = l.totalSleepMinutes ?? l.durationMinutes;
+      if (dur != null && dur > 0) {
+        totalMin += dur;
+        nights++;
+        latestLatency = l.sleepLatencyMinutes ?? latestLatency;
+        // reuse your helper to estimate efficiency
+        avgEfficiency += _approxEfficiency(dur, l);
+        if (dur >= 7 * 60) goodNights++;
+      }
+    }
+
+    final avgMin = nights == 0 ? 0 : (totalMin ~/ nights);
+    final avgEff = nights == 0 ? 0 : (avgEfficiency ~/ nights);
+
+    String _fmtMins(int m) {
+      if (m <= 0) return '—';
+      final h = m ~/ 60, mm = m % 60;
+      return mm == 0 ? '${h}h' : '${h}h ${mm}m';
+      // e.g. 7h 25m
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: const [
+                  Icon(Icons.insights, color: SleepTheme.info),
+                  SizedBox(width: 8),
+                  Text(
+                    'Insights (last 7 days)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Cards
+              Row(
+                children: [
+                  Expanded(
+                    child: _insightCard(
+                      icon: Icons.hotel,
+                      title: 'Avg. Sleep',
+                      value: _fmtMins(avgMin),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _insightCard(
+                      icon: Icons.speed,
+                      title: 'Avg. Efficiency',
+                      value: '$avgEff%',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _insightCard(
+                      icon: Icons.check_circle,
+                      title: '7h+ Nights',
+                      value: '$goodNights/$nights',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _insightCard(
+                      icon: Icons.hourglass_top,
+                      title: 'Latest Latency',
+                      value: _fmtMins(latestLatency),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+              // Quick note / tip
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: SleepTheme.info.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: SleepTheme.info.withOpacity(0.25)),
+                ),
+                child: Text(
+                  avgMin < 7 * 60
+                      ? 'You\'re averaging less than 7h. Try starting wind down 30 min earlier tonight.'
+                      : 'Nice! You\'re averaging ${_fmtMins(avgMin)}. Keep consistency for better recovery.',
+                  style: const TextStyle(
+                    color: SleepTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _MissingLogBanner({required VoidCallback onLogNow}) {
     return Container(
@@ -1236,54 +1944,71 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
   // ---------- Weekly Trend ----------
 
   Widget _buildWeeklyTrend(
-      BuildContext context, List<SleepLog> logs, SleepProfile profile) {
-    // Build last 7 calendar days (oldest..today)
+    BuildContext context,
+    List<SleepLog> logs,
+    SleepProfile profile,
+  ) {
     final now = DateTime.now();
-    final last7 = List.generate(
+    final days = List.generate(
       7,
-          (i) => DateTime(now.year, now.month, now.day).subtract(
-        Duration(days: 6 - i),
-      ),
+      (i) => DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: 6 - i)),
     );
 
-    // Map dayKey -> hours
+    // nightly hours
     final hoursByKey = <String, double>{};
     for (final l in logs) {
       final mins = (l.totalSleepMinutes ?? l.durationMinutes);
       hoursByKey[SleepTimeHelper.dayKey(l.date)] = mins / 60.0;
     }
 
-    final data =
-    last7.map((d) => hoursByKey[_dayKey(d)] ?? 0.0).toList(growable: false);
-    final labels = last7.map(_weekdayLabel).toList(growable: false);
+    return FutureBuilder<Map<String, int>>(
+      future: controller.getRecentNapMinutesByDay(days: 7),
+      builder: (context, snap) {
+        final napMinByKey = snap.data ?? const <String, int>{};
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        final nightly = days.map((d) => hoursByKey[_dayKey(d)] ?? 0.0).toList();
+        final naps = days
+            .map((d) => (napMinByKey[_dayKey(d)] ?? 0) / 60.0)
+            .toList();
+        final labels = days.map(_weekdayLabel).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Weekly Trend',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: SleepTheme.textPrimary,
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Weekly Trend',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: SleepTheme.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: SleepTheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: SleepTheme.divider),
+              ),
+              child: _buildSimpleChartFrom(
+                nightly,
+                naps.cast<double>(),
+                labels,
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: SleepTheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: SleepTheme.divider),
-          ),
-          child: _buildSimpleChartFrom(data, labels),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -1292,15 +2017,25 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
     return names[d.weekday % 7];
   }
 
-  Widget _buildSimpleChartFrom(List<double> data, List<String> days) {
-    // pick a dynamic max that doesn't crush tiny bars
-    final maxData = data.isEmpty ? 8.0 : data.reduce((a, b) => a > b ? a : b);
-    final maxValue = maxData < 6.0 ? 6.0 : (maxData > 10.0 ? 10.0 : maxData);
+  Widget _buildSimpleChartFrom(
+    List<double> sleepHours,
+    List<double> napHours,
+    List<String> days,
+  ) {
+    final maxSleep = sleepHours.isEmpty
+        ? 8.0
+        : sleepHours.reduce((a, b) => a > b ? a : b);
+    final maxNap = napHours.isEmpty
+        ? 1.0
+        : napHours.reduce((a, b) => a > b ? a : b);
+    final maxValue = [
+      maxSleep + maxNap,
+      6.0,
+    ].reduce((a, b) => a > b ? a : b); // ensure at least 6h scale
 
-    // Layout constants
-    const double chartHeight = 150; // total box height for bars + value label
-    const double valueLabelHeight = 16; // rough text height
-    const double spacing = 4; // gap between value label and bar
+    const double chartHeight = 150;
+    const double valueLabelHeight = 16;
+    const double spacing = 4;
     final double barMaxHeight = chartHeight - valueLabelHeight - spacing;
 
     return Column(
@@ -1309,12 +2044,15 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
           height: chartHeight,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(7, (index) {
-              final value = index < data.length ? data[index] : 0.0;
-              final barHeight =
-                  ((value <= 0 ? 0.05 : value) / maxValue) * barMaxHeight;
-              final isToday = index == 6;
+            children: List.generate(7, (i) {
+              final base = sleepHours[i];
+              final nap = napHours[i];
+              final total = base + nap;
+              final isToday = i == 6;
+
+              final baseH =
+                  ((base <= 0 ? 0.05 : base) / maxValue) * barMaxHeight;
+              final napH = (nap / maxValue) * barMaxHeight;
 
               return Expanded(
                 child: Padding(
@@ -1322,35 +2060,57 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // fixed box for the value text
                       SizedBox(
                         height: valueLabelHeight,
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            value > 0 ? '${value.toStringAsFixed(1)}h' : '—',
+                            total > 0 ? '${total.toStringAsFixed(1)}h' : '—',
                             style: TextStyle(
                               fontSize: 10,
                               color: isToday
                                   ? SleepTheme.primaryMid
                                   : SleepTheme.textSecondary,
-                              fontWeight:
-                              isToday ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight: isToday
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: spacing),
-                      Container(
-                        width: double.infinity,
-                        height: barHeight,
-                        decoration: BoxDecoration(
-                          color: isToday
-                              ? SleepTheme.primaryMid
-                              : SleepTheme.primaryPale,
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(4)),
-                        ),
+                      // stacked: nightly (main) + nap (thin overlay)
+                      Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            height: baseH,
+                            decoration: BoxDecoration(
+                              color: isToday
+                                  ? SleepTheme.primaryMid
+                                  : SleepTheme.primaryPale,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(4),
+                              ),
+                            ),
+                          ),
+                          if (nap > 0)
+                            // use Positioned.fill with alignment so width is constrained to parent
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Container(
+                                width: double.infinity,
+                                height: napH,
+                                decoration: BoxDecoration(
+                                  color: SleepTheme.info.withOpacity(0.6),
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
@@ -1364,21 +2124,29 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: List.generate(
             7,
-                (index) => Expanded(
+            (i) => Expanded(
               child: Text(
-                days[index],
+                days[i],
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
-                  color: index == 6
+                  color: i == 6
                       ? SleepTheme.primaryMid
                       : SleepTheme.textSecondary,
-                  fontWeight:
-                  index == 6 ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: i == 6 ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
           ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            _LegendSwatch(color: SleepTheme.primaryPale, label: 'Sleep'),
+            SizedBox(width: 12),
+            _LegendSwatch(color: SleepTheme.info, label: 'Nap'),
+          ],
         ),
       ],
     );
@@ -1389,10 +2157,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            SleepTheme.accentPale,
-            SleepTheme.primaryPale,
-          ],
+          colors: [SleepTheme.accentPale, SleepTheme.primaryPale],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -1465,12 +2230,12 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
     });
   }
 
-
-
   Widget _buildSessionStatusChip() {
     return Obx(() {
       final active = controller.sessionActive.value;
-      final status = controller.sessionStatus.value; // "Idle" | "Tracking…" | "Tracking (no audio)"
+      final status = controller
+          .sessionStatus
+          .value; // "Idle" | "Tracking…" | "Tracking (no audio)"
       final Color dot = active ? SleepTheme.success : SleepTheme.textSecondary;
 
       return Container(
@@ -1501,5 +2266,31 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
         ),
       );
     });
+  }
+}
+
+class _LegendSwatch extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendSwatch({required this.color, required this.label});
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: SleepTheme.textSecondary),
+        ),
+      ],
+    );
   }
 }

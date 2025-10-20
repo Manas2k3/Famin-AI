@@ -27,7 +27,8 @@ Future<void> main() async {
   FirebaseAuth.instance.setLanguageCode('en');
 
   await FirebaseAppCheck.instance.activate(
-    androidProvider: kReleaseMode ? AndroidProvider.playIntegrity : AndroidProvider.debug,
+    androidProvider: AndroidProvider.debug,
+    appleProvider: AppleProvider.debug,
   );
 
   if (!kReleaseMode) {

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../controller/sleep_controller.dart';
 import '../models/sleep_model.dart';
 import '../theme/sleep_theme.dart';
+import '../widgets/responsive.dart';
 import '../widgets/sleep_widget.dart';
 
 class SleepSetupScreen1 extends GetView<SleepController> {
@@ -117,7 +118,7 @@ class SleepSetupScreen1 extends GetView<SleepController> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(56),
+                minimumSize: const Size.fromHeight(48),
                 backgroundColor: Colors.indigo,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -138,6 +139,11 @@ class SleepSetupScreen1 extends GetView<SleepController> {
 
   @override
   Widget build(BuildContext context) {
+    final padding = ResponsiveHelper.getScreenPadding(context);
+    final spacing = ResponsiveHelper.getSpacing(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+    final maxWidth = ResponsiveHelper.getMaxWidth(context);
+
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
@@ -161,22 +167,25 @@ class SleepSetupScreen1 extends GetView<SleepController> {
           if (controller.errorMessage.value.isNotEmpty &&
               controller.userData.value == null) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: SleepTheme.error),
-                  const SizedBox(height: 16),
-                  Text(
-                    controller.errorMessage.value,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: controller.loadUserData,
-                    child: const Text('Retry'),
-                  ),
-                ],
+              child: Padding(
+                padding: padding,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 64, color: SleepTheme.error),
+                    SizedBox(height: spacing),
+                    Text(
+                      controller.errorMessage.value,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: spacing),
+                    ElevatedButton(
+                      onPressed: controller.loadUserData,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -188,82 +197,116 @@ class SleepSetupScreen1 extends GetView<SleepController> {
 
           return Stack(
             children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SetupProgressIndicator(currentStep: 1, totalSteps: 3),
-                    const SizedBox(height: 32),
-
-                    Text(
-                      'Let\'s personalize your\nsleep tracking',
-                      style: Theme.of(context).textTheme.displayMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'This will only take a minute',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 32),
-
-                    const SectionHeader(
-                      title: 'What\'s your natural rhythm?',
-                      subtitle: 'When do you feel most alert?',
-                    ),
-                    ...Chronotype.values.map(
-                          (chronotype) => Obx(
-                            () => ChronotypeChip(
-                          chronotype: chronotype,
-                          isSelected: controller.selectedChronotype.value == chronotype,
-                          onTap: () => controller.selectChronotype(chronotype),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    const SectionHeader(
-                      title: 'Your ideal sleep window',
-                      subtitle: 'We\'ll remind you to wind down at this time',
-                    ),
-                    Row(
+              Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  child: SingleChildScrollView(
+                    padding: padding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Obx(
-                                () => TimePickerButton(
-                              label: 'Target Bedtime',
-                              timeValue: controller.targetBedtime.value,
-                              onTap: () => _selectBedtime(context),
+                        const SetupProgressIndicator(currentStep: 1, totalSteps: 3),
+                        SizedBox(height: spacing),
+
+                        Text(
+                          'Let\'s personalize your\nsleep tracking',
+                          style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                            fontSize: isTablet ? 32 : 28,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'This will only take a minute',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        SizedBox(height: spacing),
+
+                        const SectionHeader(
+                          title: 'What\'s your natural rhythm?',
+                          subtitle: 'When do you feel most alert?',
+                        ),
+                        ...Chronotype.values.map(
+                              (chronotype) => Obx(
+                                () => ChronotypeChip(
+                              chronotype: chronotype,
+                              isSelected: controller.selectedChronotype.value == chronotype,
+                              onTap: () => controller.selectChronotype(chronotype),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Obx(
-                                () => TimePickerButton(
-                              label: 'Target Wake Time',
-                              timeValue: controller.targetWake.value,
-                              onTap: () => _selectWakeTime(context),
-                            ),
+                        SizedBox(height: spacing),
+
+                        const SectionHeader(
+                          title: 'Your ideal sleep window',
+                          subtitle: 'We\'ll remind you to wind down at this time',
+                        ),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (constraints.maxWidth < 400) {
+                              // Stack vertically on small screens
+                              return Column(
+                                children: [
+                                  Obx(
+                                        () => TimePickerButton(
+                                      label: 'Target Bedtime',
+                                      timeValue: controller.targetBedtime.value,
+                                      onTap: () => _selectBedtime(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Obx(
+                                        () => TimePickerButton(
+                                      label: 'Target Wake Time',
+                                      timeValue: controller.targetWake.value,
+                                      onTap: () => _selectWakeTime(context),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+                            // Side by side on larger screens
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: Obx(
+                                        () => TimePickerButton(
+                                      label: 'Target Bedtime',
+                                      timeValue: controller.targetBedtime.value,
+                                      onTap: () => _selectBedtime(context),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Obx(
+                                        () => TimePickerButton(
+                                      label: 'Target Wake Time',
+                                      timeValue: controller.targetWake.value,
+                                      onTap: () => _selectWakeTime(context),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        Obx(
+                              () => DurationDisplay(
+                            durationMinutes: controller.calculatedDuration.value,
+                            warningMessage: controller.durationWarning.value.isEmpty
+                                ? null
+                                : controller.durationWarning.value,
                           ),
                         ),
+                        SizedBox(height: spacing),
+
+                        PersonalizedInfoCard(userData: userData),
+                        const SizedBox(height: 100),
                       ],
                     ),
-                    const SizedBox(height: 16),
-
-                    Obx(
-                          () => DurationDisplay(
-                        durationMinutes: controller.calculatedDuration.value,
-                        warningMessage: controller.durationWarning.value.isEmpty
-                            ? null
-                            : controller.durationWarning.value,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    PersonalizedInfoCard(userData: userData),
-                    const SizedBox(height: 100), // space for bottom button
-                  ],
+                  ),
                 ),
               ),
 
@@ -275,41 +318,46 @@ class SleepSetupScreen1 extends GetView<SleepController> {
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: 0, // <- keep at 0 so it sits flush with safe area
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: SleepTheme.surface,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, -2),
-                      ),
-                    ],
-                  ),
-                  child: SafeArea(
-                    child: Obx(
-                          () => ElevatedButton(
-                        onPressed: controller.selectedChronotype.value != null &&
-                            !controller.isLoading.value
-                            ? _continue
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(56),
-                          backgroundColor: Colors.indigo,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                bottom: 0,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxWidth),
+                    child: Container(
+                      padding: padding,
+                      decoration: BoxDecoration(
+                        color: SleepTheme.surface,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, -2),
                           ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Text('Continue'),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward, size: 20),
-                          ],
+                        ],
+                      ),
+                      child: SafeArea(
+                        child: Obx(
+                              () => ElevatedButton(
+                            onPressed: controller.selectedChronotype.value != null &&
+                                !controller.isLoading.value
+                                ? _continue
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: Size.fromHeight(isTablet ? 60 : 56),
+                              backgroundColor: Colors.indigo,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Text('Continue'),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward, size: 20),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
